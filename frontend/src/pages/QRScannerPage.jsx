@@ -30,20 +30,17 @@ export default function QRScannerPage() {
     const loadClasses = async () => {
         try {
             const response = await classesAPI.getAll();
-            // Transform snake_case to camelCase
-            const transformedClasses = (response.classes || response || []).map(cls => ({
-                id: cls.id,
-                name: cls.name,
-                createdAt: cls.created_at,
-                studentsCount: cls.students_count
-            }));
-            setClasses(transformedClasses);
+            setClasses(response.classes || response || []);
         } catch (err) {
             setError('Không thể tải danh sách lớp: ' + err.message);
         }
     };
 
     const startScanning = async () => {
+        if ({ selectedClassId }.selectedClassId === '') { // Fix variable access if needed, but assuming closure scope
+            // Note: selectedClassId is available in closure
+        }
+
         if (!selectedClassId) {
             setError('Vui lòng chọn lớp');
             return;
@@ -52,79 +49,100 @@ export default function QRScannerPage() {
         setError('');
         setSuccess('');
         setScanning(true);
-
-        let html5QrCode = null;
-        let cameraStarted = false;
-
-        try {
-            html5QrCode = new Html5Qrcode("qr-reader");
-            html5QrCodeRef.current = html5QrCode;
-
-            const config = { fps: 10, qrbox: { width: 250, height: 250 } };
-
-            // Try different camera configurations
-            const cameraConfigs = [
-                { facingMode: { exact: "environment" } }, // Back camera
-                { facingMode: "user" },                   // Front camera
-                { facingMode: { ideal: "environment" } }  // Any camera
-            ];
-
-            for (let i = 0; i < cameraConfigs.length && !cameraStarted; i++) {
-                try {
-                    console.log(`Trying camera config ${i + 1}:`, cameraConfigs[i]);
-                    await html5QrCode.start(
-                        cameraConfigs[i],
-                        config,
-                        onScanSuccess,
-                        onScanError
-                    );
-                    cameraStarted = true;
-                    console.log('Camera started successfully');
-                } catch (err) {
-                    console.log(`Camera config ${i + 1} failed:`, err.message);
-                    if (i === cameraConfigs.length - 1) {
-                        // Last attempt failed, throw the error
-                        throw err;
-                    }
-                }
-            }
-
-        } catch (err) {
-            console.error('Camera error:', err);
-            let errorMessage = '❌ Không thể khởi động camera\n\n';
-
-            if (err.name === 'NotAllowedError' || err.message.includes('Permission')) {
-                errorMessage += '📷 Vui lòng cho phép truy cập camera:\n';
-                errorMessage += '1. Nhấn vào biểu tượng 🔒 hoặc ⓘ trên thanh địa chỉ\n';
-                errorMessage += '2. Chọn "Cho phép" camera\n';
-                errorMessage += '3. Tải lại trang và thử lại';
-            } else if (err.name === 'NotFoundError') {
-                errorMessage += '📷 Không tìm thấy camera trên thiết bị này.\n';
-                errorMessage += 'Vui lòng sử dụng tính năng "Tải ảnh QR" bên dưới.';
-            } else if (err.name === 'NotReadableError') {
-                errorMessage += '📷 Camera đang được sử dụng bởi ứng dụng khác.\n';
-                errorMessage += 'Vui lòng đóng các ứng dụng khác và thử lại.';
-            } else {
-                errorMessage += `Lỗi: ${err.message || 'Không xác định'}\n`;
-                errorMessage += 'Vui lòng thử tải lại trang hoặc sử dụng tính năng "Tải ảnh QR".';
-            }
-
-            setError(errorMessage);
-            setScanning(false);
-        }
+        // Initialization will happen in useEffect when 'scanning' becomes true
     };
 
     const stopScanning = async () => {
-        if (html5QrCodeRef.current) {
-            try {
-                await html5QrCodeRef.current.stop();
-                html5QrCodeRef.current.clear();
-            } catch (err) {
-                console.error('Error stopping scanner:', err);
-            }
-        }
         setScanning(false);
+        // Cleanup will happen in useEffect
     };
+
+    // Effect to handle scanner lifecycle
+    useEffect(() => {
+        let html5QrCode = null;
+
+        const initScanner = async () => {
+            if (scanning) {
+                // Wait for DOM to update
+                await new Promise(r => setTimeout(r, 100));
+
+                try {
+                    // Check if element exists
+                    if (!document.getElementById("qr-reader")) {
+                        console.error("qr-reader element not found");
+                        setError("Lỗi khởi tạo: Không tìm thấy khung camera");
+                        setScanning(false);
+                        return;
+                    }
+
+                    html5QrCode = new Html5Qrcode("qr-reader");
+                    html5QrCodeRef.current = html5QrCode;
+
+                    const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+
+                    // Try back camera specifically for mobile
+                    try {
+                        await html5QrCode.start(
+                            { facingMode: { exact: "environment" } },
+                            config,
+                            onScanSuccess,
+                            onScanError
+                        );
+                    } catch (err) {
+                        // Fallback to any camera if back camera fails
+                        console.log("Back camera failed, trying any camera...", err);
+                        await html5QrCode.start(
+                            { facingMode: "environment" },
+                            config,
+                            onScanSuccess,
+                            onScanError
+                        );
+                    }
+                } catch (err) {
+                    console.error("Failed to start scanner:", err);
+                    let errorMessage = '❌ Không thể khởi động camera\n';
+
+                    if (err.name === 'NotAllowedError' || (err.message && err.message.includes('Permission'))) {
+                        errorMessage += 'Vui lòng cấp quyền truy cập camera và thử lại.';
+                    } else if (err.name === 'NotFoundError') {
+                        errorMessage += 'Không tìm thấy camera trên thiết bị.';
+                    } else {
+                        errorMessage += `Lỗi: ${err.message || 'Không xác định'}`;
+                    }
+
+                    setError(errorMessage);
+                    setScanning(false);
+                }
+            } else {
+                // Cleanup if scanning is false but instance exists
+                if (html5QrCodeRef.current) {
+                    try {
+                        if (html5QrCodeRef.current.isScanning) {
+                            await html5QrCodeRef.current.stop();
+                        }
+                        html5QrCodeRef.current.clear();
+                    } catch (e) {
+                        console.error("Error stopping scanner:", e);
+                    }
+                    html5QrCodeRef.current = null;
+                }
+            }
+        };
+
+        initScanner();
+
+        // Cleanup on unmount or dependency change
+        return () => {
+            if (html5QrCodeRef.current) {
+                try {
+                    html5QrCodeRef.current.stop().catch(e => console.error(e));
+                    html5QrCodeRef.current.clear().catch(e => console.error(e));
+                } catch (e) {
+                    // ignore
+                }
+            }
+        };
+    }, [scanning]);
 
     const handleFileUpload = async (event) => {
         const file = event.target.files?.[0];
@@ -159,16 +177,6 @@ export default function QRScannerPage() {
         return `${days[date.getDay()]}, ${date.getDate()} tháng ${date.getMonth() + 1}, ${date.getFullYear()}`;
     };
 
-    // Helper function to convert Vietnamese to non-diacritics for backend
-    const convertAttendanceType = (type) => {
-        const mapping = {
-            'Học Giáo Lý': 'Hoc Giao Ly',
-            'Lễ Thứ 5': 'Le Thu 5',
-            'Lễ Chúa Nhật': 'Le Chua Nhat'
-        };
-        return mapping[type] || type;
-    };
-
     const onScanSuccess = async (decodedText) => {
         try {
             const studentData = JSON.parse(decodedText);
@@ -193,7 +201,7 @@ export default function QRScannerPage() {
             const saveResponse = await attendanceAPI.save({
                 classId: parseInt(selectedClassId),
                 attendanceDate,
-                attendanceType: convertAttendanceType(attendanceType),
+                attendanceType,
                 records: [{
                     studentId: studentData.studentId,
                     isPresent: true
@@ -241,7 +249,7 @@ export default function QRScannerPage() {
                             </label>
                             <select
                                 id="classSelect"
-                                className="form-select"
+                                className="form-input"
                                 value={selectedClassId}
                                 onChange={(e) => setSelectedClassId(e.target.value)}
                             >
@@ -283,7 +291,7 @@ export default function QRScannerPage() {
                             </label>
                             <select
                                 id="attendanceType"
-                                className="form-select"
+                                className="form-input"
                                 value={attendanceType}
                                 onChange={(e) => setAttendanceType(e.target.value)}
                             >
@@ -329,7 +337,7 @@ export default function QRScannerPage() {
 
                         {/* Scanned list */}
                         <div style={{ marginBottom: 'var(--spacing-lg)' }}>
-                            <h4>Đã điểm danh: {scannedStudents.length} thiếu nhi</h4>
+                            <h4>Đã điểm danh: {scannedStudents.length} em</h4>
                             <div style={{ maxHeight: '200px', overflowY: 'auto', marginTop: 'var(--spacing-md)' }}>
                                 {scannedStudents.map((student, idx) => (
                                     <div key={idx} className="alert alert-success" style={{ marginBottom: 'var(--spacing-sm)' }}>
