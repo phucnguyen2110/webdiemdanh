@@ -1,15 +1,15 @@
-import XLSX from 'xlsx';
+﻿import XLSX from 'xlsx';
 import { readFileSync, writeFileSync } from 'fs';
 
 /**
- * Normalize tên để so sánh (loại bỏ dấu, khoảng trắng thừa)
+ * Normalize tÃªn Ä‘á»ƒ so sÃ¡nh (loáº¡i bá» dáº¥u, khoáº£ng tráº¯ng thá»«a)
  */
 function normalizeName(name) {
     if (!name) return '';
     return name
         .toLowerCase()
-        .replace(/đ/g, 'd')  // Convert đ to d
-        .replace(/Đ/g, 'd')  // Convert Đ to d
+        .replace(/Ä‘/g, 'd')  // Convert Ä‘ to d
+        .replace(/Ä/g, 'd')  // Convert Ä to d
         .normalize('NFD')
         .replace(/[\u0300-\u036f]/g, '') // Remove diacritics
         .replace(/\s+/g, ' ')
@@ -17,33 +17,33 @@ function normalizeName(name) {
 }
 
 /**
- * Format date từ "2025-12-18" hoặc "18/12/2025" thành "18/12"
+ * Format date tá»« "2025-12-18" hoáº·c "18/12/2025" thÃ nh "18/12"
  */
 function formatDateForExcel(dateString) {
     // Handle YYYY-MM-DD format (from API)
     if (dateString.includes('-')) {
         const parts = dateString.split('-');
         if (parts.length === 3) {
-            return `${parts[2]}/${parts[1]}`; // "2025-12-18" → "18/12"
+            return `${parts[2]}/${parts[1]}`; // "2025-12-18" â†’ "18/12"
         }
     }
 
     // Handle DD/MM/YYYY format
     const parts = dateString.split('/');
     if (parts.length >= 2) {
-        return `${parts[0]}/${parts[1]}`; // "18/12/2025" → "18/12"
+        return `${parts[0]}/${parts[1]}`; // "18/12/2025" â†’ "18/12"
     }
 
     return dateString;
 }
 
 /**
- * Tìm sheet có tên chứa "điểm danh"
+ * TÃ¬m sheet cÃ³ tÃªn chá»©a "Ä‘iá»ƒm danh"
  */
 function findAttendanceSheet(workbook) {
     const sheetNames = workbook.SheetNames;
 
-    // Tìm sheet có chứa "điểm danh" (case-insensitive)
+    // TÃ¬m sheet cÃ³ chá»©a "Ä‘iá»ƒm danh" (case-insensitive)
     const attendanceSheetName = sheetNames.find(name =>
         normalizeName(name).includes('diem danh')
     );
@@ -59,33 +59,33 @@ function findAttendanceSheet(workbook) {
 }
 
 /**
- * Tìm dòng của thiếu nhi trong sheet
+ * TÃ¬m dÃ²ng cá»§a thiáº¿u nhi trong sheet
  */
 function findStudentRow(sheet, studentName) {
     const range = XLSX.utils.decode_range(sheet['!ref']);
     const normalizedSearchName = normalizeName(studentName);
 
-    // Duyệt qua các dòng
+    // Duyá»‡t qua cÃ¡c dÃ²ng
     for (let row = range.s.r; row <= range.e.r; row++) {
-        // Kiểm tra cột D (họ và tên đệm) và E (tên)
+        // Kiá»ƒm tra cá»™t D (há» vÃ  tÃªn Ä‘á»‡m) vÃ  E (tÃªn)
         const colDCell = sheet[XLSX.utils.encode_cell({ r: row, c: 3 })]; // Column D
         const colECell = sheet[XLSX.utils.encode_cell({ r: row, c: 4 })]; // Column E
 
         if (colDCell && colDCell.v) {
-            // Ghép cột D và E để tạo tên đầy đủ
+            // GhÃ©p cá»™t D vÃ  E Ä‘á»ƒ táº¡o tÃªn Ä‘áº§y Ä‘á»§
             const fullName = colECell && colECell.v
                 ? `${colDCell.v} ${colECell.v}`
                 : colDCell.v;
 
             const normalizedFullName = normalizeName(fullName);
 
-            // So sánh tên đầy đủ
+            // So sÃ¡nh tÃªn Ä‘áº§y Ä‘á»§
             if (normalizedFullName === normalizedSearchName) {
                 return row;
             }
         }
 
-        // Fallback: tìm trong các cột khác (cho trường hợp tên không tách)
+        // Fallback: tÃ¬m trong cÃ¡c cá»™t khÃ¡c (cho trÆ°á»ng há»£p tÃªn khÃ´ng tÃ¡ch)
         for (let col = 0; col <= Math.min(5, range.e.c); col++) {
             const cellAddress = XLSX.utils.encode_cell({ r: row, c: col });
             const cell = sheet[cellAddress];
@@ -94,7 +94,7 @@ function findStudentRow(sheet, studentName) {
                 const cellValue = String(cell.v);
                 const normalizedCellValue = normalizeName(cellValue);
 
-                // So sánh tên
+                // So sÃ¡nh tÃªn
                 if (normalizedCellValue === normalizedSearchName) {
                     return row;
                 }
@@ -106,25 +106,25 @@ function findStudentRow(sheet, studentName) {
 }
 
 /**
- * Tìm cột theo ngày và loại điểm danh
+ * TÃ¬m cá»™t theo ngÃ y vÃ  loáº¡i Ä‘iá»ƒm danh
  * Logic: 
- * 1. Tự động phát hiện dòng header (tìm dòng có nhiều ngày)
- * 2. Tìm cột có ngày khớp và loại khớp ngay bên dưới
- * 3. Nếu cột không có ngày (trống), dùng ngày từ cột gần nhất bên trái
+ * 1. Tá»± Ä‘á»™ng phÃ¡t hiá»‡n dÃ²ng header (tÃ¬m dÃ²ng cÃ³ nhiá»u ngÃ y)
+ * 2. TÃ¬m cá»™t cÃ³ ngÃ y khá»›p vÃ  loáº¡i khá»›p ngay bÃªn dÆ°á»›i
+ * 3. Náº¿u cá»™t khÃ´ng cÃ³ ngÃ y (trá»‘ng), dÃ¹ng ngÃ y tá»« cá»™t gáº§n nháº¥t bÃªn trÃ¡i
  */
 function findDateColumn(sheet, date, attendanceType) {
     const range = XLSX.utils.decode_range(sheet['!ref']);
     const dateStr = formatDateForExcel(date);
 
     const patterns = {
-        'Học Giáo Lý': ['H', 'HỌC GL', 'HGL', 'HOC GL'],
-        'Lễ Thứ 5': ['LỄ T5', 'T5', 'LE T5', 'LT5'],
-        'Lễ Chúa Nhật': ['L', 'LỄ CN', 'LCN', 'LE CN', 'CHU NHAT', 'CN']
+        'Há»c GiÃ¡o LÃ½': ['H', 'Há»ŒC GL', 'HGL', 'HOC GL'],
+        'Lá»… Thá»© 5': ['Lá»„ T5', 'T5', 'LE T5', 'LT5'],
+        'Lá»… ChÃºa Nháº­t': ['L', 'Lá»„ CN', 'LCN', 'LE CN', 'CHU NHAT', 'CN']
     };
 
     const typePatterns = patterns[attendanceType] || [];
 
-    // Bước 1: Tìm dòng header (dòng có nhiều ngày)
+    // BÆ°á»›c 1: TÃ¬m dÃ²ng header (dÃ²ng cÃ³ nhiá»u ngÃ y)
     let headerRow = -1;
     for (let row = range.s.r; row <= Math.min(range.s.r + 20, range.e.r); row++) {
         let dateCount = 0;
@@ -134,7 +134,7 @@ function findDateColumn(sheet, date, attendanceType) {
                 dateCount++;
             }
         }
-        // Nếu dòng có >= 3 ngày, coi là header
+        // Náº¿u dÃ²ng cÃ³ >= 3 ngÃ y, coi lÃ  header
         if (dateCount >= 3) {
             headerRow = row;
             break;
@@ -142,12 +142,12 @@ function findDateColumn(sheet, date, attendanceType) {
     }
 
     if (headerRow === -1) {
-        return -1; // Không tìm thấy header
+        return -1; // KhÃ´ng tÃ¬m tháº¥y header
     }
 
-    const typeRow = headerRow + 1; // Dòng loại điểm danh ngay bên dưới
+    const typeRow = headerRow + 1; // DÃ²ng loáº¡i Ä‘iá»ƒm danh ngay bÃªn dÆ°á»›i
 
-    // Bước 2: Duyệt qua các cột để tìm ngày + loại
+    // BÆ°á»›c 2: Duyá»‡t qua cÃ¡c cá»™t Ä‘á»ƒ tÃ¬m ngÃ y + loáº¡i
     let lastSeenDate = null;
 
     for (let col = range.s.c; col <= range.e.c; col++) {
@@ -157,28 +157,28 @@ function findDateColumn(sheet, date, attendanceType) {
         const dateValue = dateCell?.v ? String(dateCell.v).trim() : '';
         const typeValue = typeCell?.v ? String(typeCell.v).toUpperCase().trim() : '';
 
-        // Nếu có ngày, lưu lại
+        // Náº¿u cÃ³ ngÃ y, lÆ°u láº¡i
         if (dateValue.includes('/')) {
             lastSeenDate = dateValue;
         }
 
-        // Kiểm tra loại điểm danh
+        // Kiá»ƒm tra loáº¡i Ä‘iá»ƒm danh
         const hasPattern = typePatterns.some(pattern =>
             typeValue.includes(pattern.toUpperCase())
         );
 
         if (hasPattern) {
-            // So sánh ngày (hỗ trợ cả 7/9 và 07/09)
+            // So sÃ¡nh ngÃ y (há»— trá»£ cáº£ 7/9 vÃ  07/09)
             const normalizedDate = dateValue.split('/').map(n => parseInt(n) || 0).join('/');
             const normalizedSearchDate = dateStr.split('/').map(n => parseInt(n) || 0).join('/');
             const normalizedLastDate = lastSeenDate ? lastSeenDate.split('/').map(n => parseInt(n) || 0).join('/') : null;
 
-            // Case 1: Cột này có ngày và khớp
+            // Case 1: Cá»™t nÃ y cÃ³ ngÃ y vÃ  khá»›p
             if (dateValue.includes('/') && normalizedDate === normalizedSearchDate) {
                 return col;
             }
 
-            // Case 2: Cột này không có ngày, dùng ngày gần nhất bên trái
+            // Case 2: Cá»™t nÃ y khÃ´ng cÃ³ ngÃ y, dÃ¹ng ngÃ y gáº§n nháº¥t bÃªn trÃ¡i
             if (!dateValue.includes('/') && normalizedLastDate === normalizedSearchDate) {
                 return col;
             }
@@ -189,50 +189,50 @@ function findDateColumn(sheet, date, attendanceType) {
 }
 
 /**
- * Ghi điểm danh vào file Excel
- * @param {string} filePath - Đường dẫn file Excel
- * @param {string} studentName - Tên thiếu nhi
- * @param {string} date - Ngày điểm danh (format: DD/MM/YYYY)
- * @param {string} attendanceType - Loại điểm danh
- * @param {boolean} isPresent - Có mặt hay không
+ * Ghi Ä‘iá»ƒm danh vÃ o file Excel
+ * @param {string} filePath - ÄÆ°á»ng dáº«n file Excel
+ * @param {string} studentName - TÃªn thiáº¿u nhi
+ * @param {string} date - NgÃ y Ä‘iá»ƒm danh (format: DD/MM/YYYY)
+ * @param {string} attendanceType - Loáº¡i Ä‘iá»ƒm danh
+ * @param {boolean} isPresent - CÃ³ máº·t hay khÃ´ng
  * @returns {Object} { success: boolean, message: string }
  */
 export function writeAttendance(filePath, studentName, date, attendanceType, isPresent) {
     try {
-        // Đọc file Excel
+        // Äá»c file Excel
         const fileBuffer = readFileSync(filePath);
         const workbook = XLSX.read(fileBuffer, { type: 'buffer' });
 
-        // Tìm sheet điểm danh
+        // TÃ¬m sheet Ä‘iá»ƒm danh
         const attendanceSheetInfo = findAttendanceSheet(workbook);
         if (!attendanceSheetInfo) {
             return {
                 success: false,
-                message: 'Không tìm thấy sheet điểm danh trong file Excel'
+                message: 'KhÃ´ng tÃ¬m tháº¥y sheet Ä‘iá»ƒm danh trong file Excel'
             };
         }
 
         const sheet = attendanceSheetInfo.sheet;
 
-        // Tìm dòng của thiếu nhi
+        // TÃ¬m dÃ²ng cá»§a thiáº¿u nhi
         const studentRow = findStudentRow(sheet, studentName);
         if (studentRow === -1) {
             return {
                 success: false,
-                message: `Không tìm thấy thiếu nhi "${studentName}" trong sheet`
+                message: `KhÃ´ng tÃ¬m tháº¥y thiáº¿u nhi "${studentName}" trong sheet`
             };
         }
 
-        // Tìm cột theo ngày và loại điểm danh
+        // TÃ¬m cá»™t theo ngÃ y vÃ  loáº¡i Ä‘iá»ƒm danh
         const dateColumn = findDateColumn(sheet, date, attendanceType);
         if (dateColumn === -1) {
             return {
                 success: false,
-                message: `Không tìm thấy cột cho ngày ${date} - ${attendanceType}`
+                message: `KhÃ´ng tÃ¬m tháº¥y cá»™t cho ngÃ y ${date} - ${attendanceType}`
             };
         }
 
-        // Ghi giá trị vào ô
+        // Ghi giÃ¡ trá»‹ vÃ o Ã´
         const cellAddress = XLSX.utils.encode_cell({ r: studentRow, c: dateColumn });
         if (!sheet[cellAddress]) {
             sheet[cellAddress] = {};
@@ -240,12 +240,12 @@ export function writeAttendance(filePath, studentName, date, attendanceType, isP
         sheet[cellAddress].v = isPresent ? 1 : 0;
         sheet[cellAddress].t = 'n'; // number type
 
-        // Lưu file
+        // LÆ°u file
         XLSX.writeFile(workbook, filePath);
 
         return {
             success: true,
-            message: `Đã ghi điểm danh cho ${studentName} vào ${date} - ${attendanceType}`,
+            message: `ÄÃ£ ghi Ä‘iá»ƒm danh cho ${studentName} vÃ o ${date} - ${attendanceType}`,
             details: {
                 sheet: attendanceSheetInfo.name,
                 row: studentRow,
@@ -257,13 +257,13 @@ export function writeAttendance(filePath, studentName, date, attendanceType, isP
     } catch (error) {
         return {
             success: false,
-            message: `Lỗi khi ghi file Excel: ${error.message}`
+            message: `Lá»—i khi ghi file Excel: ${error.message}`
         };
     }
 }
 
 /**
- * Ghi điểm danh cho nhiều thiếu nhi cùng lúc
+ * Ghi Ä‘iá»ƒm danh cho nhiá»u thiáº¿u nhi cÃ¹ng lÃºc
  */
 export async function writeAttendanceBulk(filePath, attendanceData) {
     const results = [];

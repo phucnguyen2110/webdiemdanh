@@ -1,4 +1,4 @@
-import XLSX from 'xlsx';
+﻿import XLSX from 'xlsx';
 import { readFileSync } from 'fs';
 
 /**
@@ -9,7 +9,7 @@ import { readFileSync } from 'fs';
 function excelSerialToDate(serial) {
     if (!serial || isNaN(serial)) return serial;
 
-    // Nếu không phải số, trả về nguyên giá trị
+    // Náº¿u khÃ´ng pháº£i sá»‘, tráº£ vá» nguyÃªn giÃ¡ trá»‹
     if (typeof serial !== 'number') return serial;
 
     // Use XLSX's built-in date parser for accurate conversion
@@ -45,26 +45,26 @@ function processCellValue(value, colIndex) {
 }
 
 /**
- * Đọc tất cả các sheets từ file Excel
- * @param {string} filePath - Đường dẫn tới file Excel
- * @returns {Array} Mảng các sheets với tên và dữ liệu
+ * Äá»c táº¥t cáº£ cÃ¡c sheets tá»« file Excel
+ * @param {string} filePath - ÄÆ°á»ng dáº«n tá»›i file Excel
+ * @returns {Array} Máº£ng cÃ¡c sheets vá»›i tÃªn vÃ  dá»¯ liá»‡u
  */
 export function readAllSheets(filePath) {
     try {
-        // Đọc file Excel
+        // Äá»c file Excel
         const fileBuffer = readFileSync(filePath);
         const workbook = XLSX.read(fileBuffer, { type: 'buffer' });
 
-        // Lấy tất cả sheets
+        // Láº¥y táº¥t cáº£ sheets
         const sheets = [];
 
         for (const sheetName of workbook.SheetNames) {
             const worksheet = workbook.Sheets[sheetName];
 
-            // Convert sheet sang mảng 2D
+            // Convert sheet sang máº£ng 2D
             const rawData = XLSX.utils.sheet_to_json(worksheet, {
-                header: 1,  // Trả về mảng 2D thay vì objects
-                defval: ''  // Giá trị mặc định cho ô trống
+                header: 1,  // Tráº£ vá» máº£ng 2D thay vÃ¬ objects
+                defval: ''  // GiÃ¡ trá»‹ máº·c Ä‘á»‹nh cho Ã´ trá»‘ng
             });
 
             // Process data - convert Excel serial dates
@@ -83,15 +83,15 @@ export function readAllSheets(filePath) {
         return sheets;
 
     } catch (error) {
-        throw new Error(`Lỗi khi đọc file Excel: ${error.message}`);
+        throw new Error(`Lá»—i khi Ä‘á»c file Excel: ${error.message}`);
     }
 }
 
 /**
- * Đọc một sheet cụ thể từ file Excel
- * @param {string} filePath - Đường dẫn tới file Excel
- * @param {string} sheetName - Tên sheet cần đọc
- * @returns {Object} Dữ liệu của sheet
+ * Äá»c má»™t sheet cá»¥ thá»ƒ tá»« file Excel
+ * @param {string} filePath - ÄÆ°á»ng dáº«n tá»›i file Excel
+ * @param {string} sheetName - TÃªn sheet cáº§n Ä‘á»c
+ * @returns {Object} Dá»¯ liá»‡u cá»§a sheet
  */
 export function readSheet(filePath, sheetName) {
     try {
@@ -99,7 +99,7 @@ export function readSheet(filePath, sheetName) {
         const workbook = XLSX.read(fileBuffer, { type: 'buffer' });
 
         if (!workbook.SheetNames.includes(sheetName)) {
-            throw new Error(`Sheet "${sheetName}" không tồn tại trong file`);
+            throw new Error(`Sheet "${sheetName}" khÃ´ng tá»“n táº¡i trong file`);
         }
 
         const worksheet = workbook.Sheets[sheetName];
@@ -121,14 +121,14 @@ export function readSheet(filePath, sheetName) {
         };
 
     } catch (error) {
-        throw new Error(`Lỗi khi đọc sheet: ${error.message}`);
+        throw new Error(`Lá»—i khi Ä‘á»c sheet: ${error.message}`);
     }
 }
 
 /**
- * Lấy danh sách tên các sheets trong file Excel
- * @param {string} filePath - Đường dẫn tới file Excel
- * @returns {Array} Mảng tên các sheets
+ * Láº¥y danh sÃ¡ch tÃªn cÃ¡c sheets trong file Excel
+ * @param {string} filePath - ÄÆ°á»ng dáº«n tá»›i file Excel
+ * @returns {Array} Máº£ng tÃªn cÃ¡c sheets
  */
 export function getSheetNames(filePath) {
     try {
@@ -136,6 +136,6 @@ export function getSheetNames(filePath) {
         const workbook = XLSX.read(fileBuffer, { type: 'buffer' });
         return workbook.SheetNames;
     } catch (error) {
-        throw new Error(`Lỗi khi đọc danh sách sheets: ${error.message}`);
+        throw new Error(`Lá»—i khi Ä‘á»c danh sÃ¡ch sheets: ${error.message}`);
     }
 }

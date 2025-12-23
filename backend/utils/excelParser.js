@@ -1,4 +1,4 @@
-import XLSX from 'xlsx';
+﻿import XLSX from 'xlsx';
 
 /**
  * Convert Excel serial date to DD/MM/YYYY format
@@ -21,16 +21,16 @@ function excelSerialToDate(serial) {
 }
 
 /**
- * Parse file Excel và trích xuất danh sách thiếu nhi
- * @param {Buffer} fileBuffer - Buffer của file Excel
- * @returns {Array} Danh sách thiếu nhi với format [{stt, baptismalName, fullName, dateOfBirth}]
+ * Parse file Excel vÃ  trÃ­ch xuáº¥t danh sÃ¡ch thiáº¿u nhi
+ * @param {Buffer} fileBuffer - Buffer cá»§a file Excel
+ * @returns {Array} Danh sÃ¡ch thiáº¿u nhi vá»›i format [{stt, baptismalName, fullName, dateOfBirth}]
  */
 export function parseExcelFile(fileBuffer) {
     try {
-        // Đọc workbook từ buffer
+        // Äá»c workbook tá»« buffer
         const workbook = XLSX.read(fileBuffer, { type: 'buffer' });
 
-        // Lấy sheet đầu tiên
+        // Láº¥y sheet Ä‘áº§u tiÃªn
         const sheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[sheetName];
 
@@ -38,15 +38,15 @@ export function parseExcelFile(fileBuffer) {
         const rawData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
 
         if (rawData.length === 0) {
-            throw new Error('File Excel trống');
+            throw new Error('File Excel trá»‘ng');
         }
 
-        // Tìm header row (dòng chứa "STT" hoặc "Họ tên")
+        // TÃ¬m header row (dÃ²ng chá»©a "STT" hoáº·c "Há» tÃªn")
         let headerRowIndex = -1;
         let sttColIndex = -1;
-        let baptismalNameColIndex = 2; // Cột C (index 2) - Tên Thánh
+        let baptismalNameColIndex = 2; // Cá»™t C (index 2) - TÃªn ThÃ¡nh
         let nameColIndex = -1;
-        let dateOfBirthColIndex = 5; // Cột F (index 5) - Ngày sinh
+        let dateOfBirthColIndex = 5; // Cá»™t F (index 5) - NgÃ y sinh
         let hasSecondNameColumn = false;
 
         for (let i = 0; i < Math.min(15, rawData.length); i++) {
@@ -56,17 +56,17 @@ export function parseExcelFile(fileBuffer) {
             for (let j = 0; j < row.length; j++) {
                 const cellValue = String(row[j] || '').toLowerCase().trim();
 
-                // Tìm cột STT
-                if (cellValue.includes('stt') || cellValue === 'số tt') {
+                // TÃ¬m cá»™t STT
+                if (cellValue.includes('stt') || cellValue === 'sá»‘ tt') {
                     headerRowIndex = i;
                     sttColIndex = j;
                 }
 
-                // Tìm cột tên - hỗ trợ nhiều biến thể
-                if (cellValue.includes('họ') && cellValue.includes('tên') ||
-                    cellValue.includes('họ và tên') ||
-                    cellValue.includes('tên') && j > 0 ||
-                    cellValue === 'họ tên') {
+                // TÃ¬m cá»™t tÃªn - há»— trá»£ nhiá»u biáº¿n thá»ƒ
+                if (cellValue.includes('há»') && cellValue.includes('tÃªn') ||
+                    cellValue.includes('há» vÃ  tÃªn') ||
+                    cellValue.includes('tÃªn') && j > 0 ||
+                    cellValue === 'há» tÃªn') {
                     nameColIndex = j;
                 }
             }
@@ -76,14 +76,14 @@ export function parseExcelFile(fileBuffer) {
             }
         }
 
-        // Nếu không tìm thấy header, giả định cột 0 là STT, cột 1 là Họ tên
+        // Náº¿u khÃ´ng tÃ¬m tháº¥y header, giáº£ Ä‘á»‹nh cá»™t 0 lÃ  STT, cá»™t 1 lÃ  Há» tÃªn
         if (headerRowIndex === -1) {
             headerRowIndex = 0;
             sttColIndex = 0;
             nameColIndex = 1;
         }
 
-        // Kiểm tra xem tên có bị tách thành 2 cột không
+        // Kiá»ƒm tra xem tÃªn cÃ³ bá»‹ tÃ¡ch thÃ nh 2 cá»™t khÃ´ng
         if (nameColIndex !== -1 && rawData.length > headerRowIndex + 1) {
             let countWithSecondCol = 0;
             let samplesChecked = 0;
@@ -97,20 +97,20 @@ export function parseExcelFile(fileBuffer) {
 
                 samplesChecked++;
 
-                // Kiểm tra cột tiếp theo có dữ liệu không
+                // Kiá»ƒm tra cá»™t tiáº¿p theo cÃ³ dá»¯ liá»‡u khÃ´ng
                 if (sampleRow[nameColIndex + 1] &&
                     String(sampleRow[nameColIndex + 1]).trim() !== '') {
                     countWithSecondCol++;
                 }
             }
 
-            // Nếu > 50% mẫu có cột thứ 2, coi như tên bị tách
+            // Náº¿u > 50% máº«u cÃ³ cá»™t thá»© 2, coi nhÆ° tÃªn bá»‹ tÃ¡ch
             if (countWithSecondCol > samplesChecked / 2) {
                 hasSecondNameColumn = true;
             }
         }
 
-        // Parse dữ liệu từ dòng sau header
+        // Parse dá»¯ liá»‡u tá»« dÃ²ng sau header
         const students = [];
         for (let i = headerRowIndex + 1; i < rawData.length; i++) {
             const row = rawData[i];
@@ -120,24 +120,24 @@ export function parseExcelFile(fileBuffer) {
                 continue;
             }
 
-            // Skip nếu không có dữ liệu ở cột tên
+            // Skip náº¿u khÃ´ng cÃ³ dá»¯ liá»‡u á»Ÿ cá»™t tÃªn
             if (!row[nameColIndex] || String(row[nameColIndex]).trim() === '') {
                 continue;
             }
 
-            // Lấy STT
+            // Láº¥y STT
             const stt = row[sttColIndex] ? parseInt(row[sttColIndex]) : i - headerRowIndex;
 
-            // Skip nếu STT không hợp lệ
+            // Skip náº¿u STT khÃ´ng há»£p lá»‡
             if (isNaN(stt)) {
                 continue;
             }
 
-            // Lấy tên thánh (cột C - index 2)
+            // Láº¥y tÃªn thÃ¡nh (cá»™t C - index 2)
             const baptismalName = row[baptismalNameColIndex] ?
                 String(row[baptismalNameColIndex]).trim() : '';
 
-            // Ghép tên từ 1 hoặc 2 cột
+            // GhÃ©p tÃªn tá»« 1 hoáº·c 2 cá»™t
             let fullName;
             if (hasSecondNameColumn && row[nameColIndex + 1]) {
                 fullName = `${String(row[nameColIndex]).trim()} ${String(row[nameColIndex + 1]).trim()}`.trim();
@@ -145,20 +145,20 @@ export function parseExcelFile(fileBuffer) {
                 fullName = String(row[nameColIndex]).trim();
             }
 
-            // Skip nếu tên trống sau khi ghép
+            // Skip náº¿u tÃªn trá»‘ng sau khi ghÃ©p
             if (!fullName || fullName === '') {
                 continue;
             }
 
-            // Lấy ngày sinh (cột F - index 5) và convert từ Excel serial
+            // Láº¥y ngÃ y sinh (cá»™t F - index 5) vÃ  convert tá»« Excel serial
             let dateOfBirth = '';
             if (row[dateOfBirthColIndex]) {
                 const dobValue = row[dateOfBirthColIndex];
-                // Nếu là số (Excel serial date)
+                // Náº¿u lÃ  sá»‘ (Excel serial date)
                 if (typeof dobValue === 'number') {
                     dateOfBirth = excelSerialToDate(dobValue);
                 } else {
-                    // Nếu đã là string, giữ nguyên
+                    // Náº¿u Ä‘Ã£ lÃ  string, giá»¯ nguyÃªn
                     dateOfBirth = String(dobValue).trim();
                 }
             }
@@ -172,13 +172,13 @@ export function parseExcelFile(fileBuffer) {
         }
 
         if (students.length === 0) {
-            throw new Error('Không tìm thấy dữ liệu thiếu nhi trong file Excel');
+            throw new Error('KhÃ´ng tÃ¬m tháº¥y dá»¯ liá»‡u thiáº¿u nhi trong file Excel');
         }
 
         return students;
 
     } catch (error) {
-        throw new Error(`Lỗi khi đọc file Excel: ${error.message}`);
+        throw new Error(`Lá»—i khi Ä‘á»c file Excel: ${error.message}`);
     }
 }
 
@@ -189,7 +189,7 @@ export function parseExcelFile(fileBuffer) {
  */
 export function validateExcelFile(file) {
     if (!file) {
-        return { valid: false, error: 'Không có file được upload' };
+        return { valid: false, error: 'KhÃ´ng cÃ³ file Ä‘Æ°á»£c upload' };
     }
 
     // Check file extension
@@ -197,13 +197,13 @@ export function validateExcelFile(file) {
     const fileExtension = file.originalname.toLowerCase().slice(file.originalname.lastIndexOf('.'));
 
     if (!allowedExtensions.includes(fileExtension)) {
-        return { valid: false, error: 'File phải có định dạng .xlsx hoặc .xls' };
+        return { valid: false, error: 'File pháº£i cÃ³ Ä‘á»‹nh dáº¡ng .xlsx hoáº·c .xls' };
     }
 
     // Check file size (max 5MB)
     const maxSize = 5 * 1024 * 1024; // 5MB
     if (file.size > maxSize) {
-        return { valid: false, error: 'File không được vượt quá 5MB' };
+        return { valid: false, error: 'File khÃ´ng Ä‘Æ°á»£c vÆ°á»£t quÃ¡ 5MB' };
     }
 
     return { valid: true };

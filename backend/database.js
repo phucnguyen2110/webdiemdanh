@@ -1,11 +1,11 @@
-import sqlite3 from 'sqlite3';
+﻿import sqlite3 from 'sqlite3';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-// Khởi tạo database
+// Khá»Ÿi táº¡o database
 const dbPath = join(__dirname, 'database.db');
 const db = new sqlite3.Database(dbPath);
 
@@ -38,13 +38,13 @@ const all = (sql, params = []) => {
 };
 
 /**
- * Khởi tạo database schema
+ * Khá»Ÿi táº¡o database schema
  */
 export async function initializeDatabase() {
   // Enable foreign keys
   await run('PRAGMA foreign_keys = ON');
 
-  // Tạo bảng classes (lớp học)
+  // Táº¡o báº£ng classes (lá»›p há»c)
   await run(`
     CREATE TABLE IF NOT EXISTS classes (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -54,7 +54,7 @@ export async function initializeDatabase() {
     )
   `);
 
-  // Tạo bảng students (thiếu nhi)
+  // Táº¡o báº£ng students (thiáº¿u nhi)
   await run(`
     CREATE TABLE IF NOT EXISTS students (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -66,20 +66,20 @@ export async function initializeDatabase() {
     )
   `);
 
-  // Tạo bảng attendance_sessions (buổi điểm danh)
+  // Táº¡o báº£ng attendance_sessions (buá»•i Ä‘iá»ƒm danh)
   await run(`
     CREATE TABLE IF NOT EXISTS attendance_sessions (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       class_id INTEGER NOT NULL,
       attendance_date DATE NOT NULL,
-      attendance_type TEXT NOT NULL CHECK(attendance_type IN ('Học Giáo Lý', 'Lễ Thứ 5', 'Lễ Chúa Nhật')),
+      attendance_type TEXT NOT NULL CHECK(attendance_type IN ('Há»c GiÃ¡o LÃ½', 'Lá»… Thá»© 5', 'Lá»… ChÃºa Nháº­t')),
       attendance_method TEXT DEFAULT 'manual' CHECK(attendance_method IN ('manual', 'qr')),
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (class_id) REFERENCES classes(id) ON DELETE CASCADE
     )
   `);
 
-  // Tạo bảng attendance_records (chi tiết điểm danh)
+  // Táº¡o báº£ng attendance_records (chi tiáº¿t Ä‘iá»ƒm danh)
   await run(`
     CREATE TABLE IF NOT EXISTS attendance_records (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -97,7 +97,7 @@ export async function initializeDatabase() {
       ALTER TABLE attendance_sessions 
       ADD COLUMN attendance_method TEXT DEFAULT 'manual' CHECK(attendance_method IN ('manual', 'qr'))
     `);
-    console.log('✅ Migration: Added attendance_method column');
+    console.log('âœ… Migration: Added attendance_method column');
   } catch (err) {
     // Column already exists, ignore error
     if (!err.message.includes('duplicate column name')) {
@@ -105,13 +105,13 @@ export async function initializeDatabase() {
     }
   }
 
-  // Tạo indexes để tăng tốc query
+  // Táº¡o indexes Ä‘á»ƒ tÄƒng tá»‘c query
   await run('CREATE INDEX IF NOT EXISTS idx_students_class ON students(class_id)');
   await run('CREATE INDEX IF NOT EXISTS idx_attendance_sessions_class ON attendance_sessions(class_id)');
   await run('CREATE INDEX IF NOT EXISTS idx_attendance_sessions_date ON attendance_sessions(attendance_date)');
   await run('CREATE INDEX IF NOT EXISTS idx_attendance_records_session ON attendance_records(session_id)');
 
-  console.log('✅ Database initialized successfully');
+  console.log('âœ… Database initialized successfully');
 }
 
 /**
@@ -120,7 +120,7 @@ export async function initializeDatabase() {
 
 // Classes
 export const classesDB = {
-  // Tạo lớp mới
+  // Táº¡o lá»›p má»›i
   create: async (name, excelFilePath = null) => {
     const result = await run(
       'INSERT INTO classes (name, excel_file_path) VALUES (?, ?)',
@@ -129,7 +129,7 @@ export const classesDB = {
     return result.lastID;
   },
 
-  // Lấy tất cả lớp
+  // Láº¥y táº¥t cáº£ lá»›p
   getAll: async () => {
     const rows = await all(`
       SELECT 
@@ -145,17 +145,17 @@ export const classesDB = {
     return rows;
   },
 
-  // Lấy lớp theo ID
+  // Láº¥y lá»›p theo ID
   getById: async (id) => {
     return await get('SELECT * FROM classes WHERE id = ?', [id]);
   },
 
-  // Cập nhật tên lớp
+  // Cáº­p nháº­t tÃªn lá»›p
   update: async (id, name) => {
     return await run('UPDATE classes SET name = ? WHERE id = ?', [name, id]);
   },
 
-  // Xóa lớp
+  // XÃ³a lá»›p
   delete: async (id) => {
     return await run('DELETE FROM classes WHERE id = ?', [id]);
   }
@@ -163,7 +163,7 @@ export const classesDB = {
 
 // Students
 export const studentsDB = {
-  // Tạo nhiều học sinh cùng lúc (bulk insert)
+  // Táº¡o nhiá»u há»c sinh cÃ¹ng lÃºc (bulk insert)
   createBulk: async (classId, students) => {
     await run('BEGIN TRANSACTION');
     try {
@@ -180,7 +180,7 @@ export const studentsDB = {
     }
   },
 
-  // Lấy tất cả học sinh trong lớp
+  // Láº¥y táº¥t cáº£ há»c sinh trong lá»›p
   getByClassId: async (classId) => {
     return await all(`
       SELECT id, stt, baptismal_name as baptismalName, full_name as fullName, date_of_birth as dateOfBirth
@@ -190,7 +190,7 @@ export const studentsDB = {
     `, [classId]);
   },
 
-  // Lấy thông tin một học sinh
+  // Láº¥y thÃ´ng tin má»™t há»c sinh
   getById: async (studentId) => {
     return await get(`
       SELECT id, class_id as classId, stt, baptismal_name as baptismalName, full_name as fullName, date_of_birth as dateOfBirth
@@ -199,7 +199,7 @@ export const studentsDB = {
     `, [studentId]);
   },
 
-  // Xóa tất cả học sinh trong lớp
+  // XÃ³a táº¥t cáº£ há»c sinh trong lá»›p
   deleteByClassId: async (classId) => {
     return await run('DELETE FROM students WHERE class_id = ?', [classId]);
   }
@@ -207,7 +207,7 @@ export const studentsDB = {
 
 // Attendance Sessions
 export const attendanceSessionsDB = {
-  // Tạo buổi điểm danh mới
+  // Táº¡o buá»•i Ä‘iá»ƒm danh má»›i
   create: async (classId, attendanceDate, attendanceType, attendanceMethod = 'manual') => {
     const result = await run(`
       INSERT INTO attendance_sessions (class_id, attendance_date, attendance_type, attendance_method)
@@ -216,7 +216,7 @@ export const attendanceSessionsDB = {
     return result.lastID;
   },
 
-  // Lấy lịch sử điểm danh theo lớp
+  // Láº¥y lá»‹ch sá»­ Ä‘iá»ƒm danh theo lá»›p
   getByClassId: async (classId, startDate = null, endDate = null) => {
     let query = `
       SELECT 
@@ -248,7 +248,7 @@ export const attendanceSessionsDB = {
     return await all(query, params);
   },
 
-  // Lấy chi tiết buổi điểm danh
+  // Láº¥y chi tiáº¿t buá»•i Ä‘iá»ƒm danh
   getById: async (sessionId) => {
     return await get(`
       SELECT 
@@ -264,7 +264,7 @@ export const attendanceSessionsDB = {
     `, [sessionId]);
   },
 
-  // Xóa session (records sẽ tự động xóa do ON DELETE CASCADE)
+  // XÃ³a session (records sáº½ tá»± Ä‘á»™ng xÃ³a do ON DELETE CASCADE)
   delete: async (sessionId) => {
     return await run('DELETE FROM attendance_sessions WHERE id = ?', [sessionId]);
   }
@@ -272,7 +272,7 @@ export const attendanceSessionsDB = {
 
 // Attendance Records
 export const attendanceRecordsDB = {
-  // Tạo nhiều bản ghi điểm danh cùng lúc
+  // Táº¡o nhiá»u báº£n ghi Ä‘iá»ƒm danh cÃ¹ng lÃºc
   createBulk: async (sessionId, records) => {
     await run('BEGIN TRANSACTION');
     try {
@@ -289,7 +289,7 @@ export const attendanceRecordsDB = {
     }
   },
 
-  // Lấy chi tiết điểm danh theo session
+  // Láº¥y chi tiáº¿t Ä‘iá»ƒm danh theo session
   getBySessionId: async (sessionId) => {
     return await all(`
       SELECT 

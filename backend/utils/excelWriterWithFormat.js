@@ -1,14 +1,14 @@
-import ExcelJS from 'exceljs';
+﻿import ExcelJS from 'exceljs';
 
 /**
- * Normalize tên để so sánh (loại bỏ dấu, khoảng trắng thừa)
+ * Normalize tÃªn Ä‘á»ƒ so sÃ¡nh (loáº¡i bá» dáº¥u, khoáº£ng tráº¯ng thá»«a)
  */
 function normalizeName(name) {
     if (!name) return '';
     return name
         .toLowerCase()
-        .replace(/đ/g, 'd')
-        .replace(/Đ/g, 'd')
+        .replace(/Ä‘/g, 'd')
+        .replace(/Ä/g, 'd')
         .normalize('NFD')
         .replace(/[\u0300-\u036f]/g, '')
         .replace(/\s+/g, ' ')
@@ -16,7 +16,7 @@ function normalizeName(name) {
 }
 
 /**
- * Format date từ "2025-12-18" hoặc "18/12/2025" thành "18/12"
+ * Format date tá»« "2025-12-18" hoáº·c "18/12/2025" thÃ nh "18/12"
  */
 function formatDateForExcel(dateString) {
     if (dateString.includes('-')) {
@@ -35,7 +35,7 @@ function formatDateForExcel(dateString) {
 }
 
 /**
- * Tìm sheet có tên chứa "điểm danh"
+ * TÃ¬m sheet cÃ³ tÃªn chá»©a "Ä‘iá»ƒm danh"
  */
 function findAttendanceSheet(workbook) {
     const sheetNames = workbook.worksheets.map(ws => ws.name);
@@ -51,17 +51,17 @@ function findAttendanceSheet(workbook) {
 }
 
 /**
- * Tìm dòng của thiếu nhi trong sheet
+ * TÃ¬m dÃ²ng cá»§a thiáº¿u nhi trong sheet
  */
 function findStudentRow(worksheet, studentName) {
     const normalizedSearchName = normalizeName(studentName);
     let foundRow = -1;
 
-    // Duyệt qua các dòng
+    // Duyá»‡t qua cÃ¡c dÃ²ng
     worksheet.eachRow((row, rowNumber) => {
         if (foundRow !== -1) return; // Already found
 
-        // Kiểm tra cột D (họ và tên đệm) và E (tên)
+        // Kiá»ƒm tra cá»™t D (há» vÃ  tÃªn Ä‘á»‡m) vÃ  E (tÃªn)
         const colD = row.getCell(4).value; // Column D (index 4)
         const colE = row.getCell(5).value; // Column E (index 5)
 
@@ -75,7 +75,7 @@ function findStudentRow(worksheet, studentName) {
             }
         }
 
-        // Fallback: tìm trong các cột khác
+        // Fallback: tÃ¬m trong cÃ¡c cá»™t khÃ¡c
         for (let col = 1; col <= 6; col++) {
             const cell = row.getCell(col);
             if (cell.value) {
@@ -94,20 +94,20 @@ function findStudentRow(worksheet, studentName) {
 }
 
 /**
- * Tìm cột theo ngày và loại điểm danh
+ * TÃ¬m cá»™t theo ngÃ y vÃ  loáº¡i Ä‘iá»ƒm danh
  */
 function findDateColumn(worksheet, date, attendanceType) {
     const dateStr = formatDateForExcel(date);
 
     const patterns = {
-        'Học Giáo Lý': ['H', 'HỌC GL', 'HGL', 'HOC GL'],
-        'Lễ Thứ 5': ['LỄ T5', 'T5', 'LE T5', 'LT5'],
-        'Lễ Chúa Nhật': ['L', 'LỄ CN', 'LCN', 'LE CN', 'CHU NHAT', 'CN']
+        'Há»c GiÃ¡o LÃ½': ['H', 'Há»ŒC GL', 'HGL', 'HOC GL'],
+        'Lá»… Thá»© 5': ['Lá»„ T5', 'T5', 'LE T5', 'LT5'],
+        'Lá»… ChÃºa Nháº­t': ['L', 'Lá»„ CN', 'LCN', 'LE CN', 'CHU NHAT', 'CN']
     };
 
     const typePatterns = patterns[attendanceType] || [];
 
-    // Tìm dòng header (dòng có nhiều ngày)
+    // TÃ¬m dÃ²ng header (dÃ²ng cÃ³ nhiá»u ngÃ y)
     let headerRow = -1;
     for (let rowNum = 1; rowNum <= Math.min(20, worksheet.rowCount); rowNum++) {
         const row = worksheet.getRow(rowNum);
@@ -135,7 +135,7 @@ function findDateColumn(worksheet, date, attendanceType) {
 
     let lastSeenDate = null;
 
-    // Duyệt qua các cột
+    // Duyá»‡t qua cÃ¡c cá»™t
     for (let col = 1; col <= worksheet.columnCount; col++) {
         const dateCell = headerRowObj.getCell(col);
         const typeCell = typeRowObj.getCell(col);
@@ -170,63 +170,63 @@ function findDateColumn(worksheet, date, attendanceType) {
 }
 
 /**
- * Ghi điểm danh vào file Excel (GIỮ NGUYÊN FORMAT)
- * @param {string} filePath - Đường dẫn file Excel
- * @param {string} studentName - Tên thiếu nhi
- * @param {string} date - Ngày điểm danh
- * @param {string} attendanceType - Loại điểm danh
- * @param {boolean} isPresent - Có mặt hay không
+ * Ghi Ä‘iá»ƒm danh vÃ o file Excel (GIá»® NGUYÃŠN FORMAT)
+ * @param {string} filePath - ÄÆ°á»ng dáº«n file Excel
+ * @param {string} studentName - TÃªn thiáº¿u nhi
+ * @param {string} date - NgÃ y Ä‘iá»ƒm danh
+ * @param {string} attendanceType - Loáº¡i Ä‘iá»ƒm danh
+ * @param {boolean} isPresent - CÃ³ máº·t hay khÃ´ng
  * @returns {Object} { success: boolean, message: string }
  */
 export async function writeAttendanceWithFormat(filePath, studentName, date, attendanceType, isPresent) {
     try {
-        // Đọc file Excel
+        // Äá»c file Excel
         const workbook = new ExcelJS.Workbook();
         await workbook.xlsx.readFile(filePath);
 
-        // Tìm sheet điểm danh
+        // TÃ¬m sheet Ä‘iá»ƒm danh
         const worksheet = findAttendanceSheet(workbook);
         if (!worksheet) {
             return {
                 success: false,
-                message: 'Không tìm thấy sheet điểm danh trong file Excel'
+                message: 'KhÃ´ng tÃ¬m tháº¥y sheet Ä‘iá»ƒm danh trong file Excel'
             };
         }
 
-        // Tìm dòng của thiếu nhi
+        // TÃ¬m dÃ²ng cá»§a thiáº¿u nhi
         const studentRow = findStudentRow(worksheet, studentName);
         if (studentRow === -1) {
             return {
                 success: false,
-                message: `Không tìm thấy thiếu nhi "${studentName}" trong sheet`
+                message: `KhÃ´ng tÃ¬m tháº¥y thiáº¿u nhi "${studentName}" trong sheet`
             };
         }
 
-        // Tìm cột theo ngày và loại điểm danh
+        // TÃ¬m cá»™t theo ngÃ y vÃ  loáº¡i Ä‘iá»ƒm danh
         const dateColumn = findDateColumn(worksheet, date, attendanceType);
         if (dateColumn === -1) {
             return {
                 success: false,
-                message: `Không tìm thấy cột cho ngày ${date} - ${attendanceType}`
+                message: `KhÃ´ng tÃ¬m tháº¥y cá»™t cho ngÃ y ${date} - ${attendanceType}`
             };
         }
 
-        // Ghi giá trị vào ô (GIỮ NGUYÊN FORMAT)
+        // Ghi giÃ¡ trá»‹ vÃ o Ã´ (GIá»® NGUYÃŠN FORMAT)
         const cell = worksheet.getRow(studentRow).getCell(dateColumn);
         cell.value = isPresent ? 1 : 0;
-        // Không thay đổi style, format của cell
+        // KhÃ´ng thay Ä‘á»•i style, format cá»§a cell
 
         // Force Excel to recalculate all formulas when opening the file
         workbook.calcProperties = {
             fullCalcOnLoad: true
         };
 
-        // Lưu file (GIỮ NGUYÊN TẤT CẢ FORMAT)
+        // LÆ°u file (GIá»® NGUYÃŠN Táº¤T Cáº¢ FORMAT)
         await workbook.xlsx.writeFile(filePath);
 
         return {
             success: true,
-            message: `Đã ghi điểm danh cho ${studentName} vào ${date} - ${attendanceType}`,
+            message: `ÄÃ£ ghi Ä‘iá»ƒm danh cho ${studentName} vÃ o ${date} - ${attendanceType}`,
             details: {
                 sheet: worksheet.name,
                 row: studentRow,
@@ -237,7 +237,7 @@ export async function writeAttendanceWithFormat(filePath, studentName, date, att
     } catch (error) {
         return {
             success: false,
-            message: `Lỗi khi ghi file Excel: ${error.message}`
+            message: `Lá»—i khi ghi file Excel: ${error.message}`
         };
     }
 }

@@ -1,4 +1,4 @@
-import express from 'express';
+﻿import express from 'express';
 import cors from 'cors';
 import { initializeDatabase } from './database.js';
 import classesRouter from './routes/classes.js';
@@ -6,11 +6,11 @@ import attendanceRouter from './routes/attendance.js';
 import exportRouter from './routes/export.js';
 import studentsRouter from './routes/students.js';
 
-// Khởi tạo Express app
+// Khá»Ÿi táº¡o Express app
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Khởi tạo database
+// Khá»Ÿi táº¡o database
 initializeDatabase();
 
 // Middleware
@@ -53,7 +53,7 @@ app.use('/api/students', studentsRouter);
 app.get('/api/health', (req, res) => {
     res.json({
         success: true,
-        message: 'Server đang hoạt động',
+        message: 'Server Ä‘ang hoáº¡t Ä‘á»™ng',
         timestamp: new Date().toISOString()
     });
 });
@@ -62,7 +62,7 @@ app.get('/api/health', (req, res) => {
 app.get('/', (req, res) => {
     res.json({
         success: true,
-        message: 'API Hệ thống Điểm Danh Thiếu Nhi Giáo Lý',
+        message: 'API Há»‡ thá»‘ng Äiá»ƒm Danh Thiáº¿u Nhi GiÃ¡o LÃ½',
         version: '1.0.0',
         endpoints: {
             classes: '/api/classes',
@@ -77,7 +77,7 @@ app.get('/', (req, res) => {
 app.use((req, res) => {
     res.status(404).json({
         success: false,
-        error: 'Endpoint không tồn tại'
+        error: 'Endpoint khÃ´ng tá»“n táº¡i'
     });
 });
 
@@ -86,7 +86,7 @@ app.use((err, req, res, next) => {
     console.error('Error:', err);
     res.status(500).json({
         success: false,
-        error: 'Lỗi server',
+        error: 'Lá»—i server',
         message: process.env.NODE_ENV === 'development' ? err.message : undefined
     });
 });
@@ -94,10 +94,10 @@ app.use((err, req, res, next) => {
 // Start server
 app.listen(PORT, () => {
     console.log('='.repeat(50));
-    console.log('🚀 Server đang chạy tại:');
+    console.log('ðŸš€ Server Ä‘ang cháº¡y táº¡i:');
     console.log(`   http://localhost:${PORT}`);
     console.log('='.repeat(50));
-    console.log('📚 API Endpoints:');
+    console.log('ðŸ“š API Endpoints:');
     console.log(`   GET    /api/health`);
     console.log(`   GET    /api/classes`);
     console.log(`   POST   /api/classes/upload`);

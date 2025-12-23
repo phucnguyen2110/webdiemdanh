@@ -1,28 +1,28 @@
-import XLSX from 'xlsx';
+﻿import XLSX from 'xlsx';
 
 /**
- * Export dữ liệu điểm danh ra file Excel
- * @param {Object} classInfo - Thông tin lớp {id, name}
- * @param {Array} students - Danh sách thiếu nhi
- * @param {Array} sessions - Danh sách buổi điểm danh với records
+ * Export dá»¯ liá»‡u Ä‘iá»ƒm danh ra file Excel
+ * @param {Object} classInfo - ThÃ´ng tin lá»›p {id, name}
+ * @param {Array} students - Danh sÃ¡ch thiáº¿u nhi
+ * @param {Array} sessions - Danh sÃ¡ch buá»•i Ä‘iá»ƒm danh vá»›i records
  * @returns {Buffer} Excel file buffer
  */
 export function exportAttendanceToExcel(classInfo, students, sessions) {
-    // Tạo workbook mới
+    // Táº¡o workbook má»›i
     const workbook = XLSX.utils.book_new();
 
-    // === SHEET 1: Tổng hợp điểm danh ===
+    // === SHEET 1: Tá»•ng há»£p Ä‘iá»ƒm danh ===
     const summaryData = [];
 
     // Header
-    const header = ['STT', 'Họ và Tên'];
+    const header = ['STT', 'Há» vÃ  TÃªn'];
     sessions.forEach(session => {
         const dateStr = new Date(session.attendanceDate).toLocaleDateString('vi-VN');
         header.push(`${dateStr}\n${session.attendanceType}`);
     });
     summaryData.push(header);
 
-    // Tạo map để tra cứu nhanh
+    // Táº¡o map Ä‘á»ƒ tra cá»©u nhanh
     const sessionRecordsMap = {};
     sessions.forEach(session => {
         sessionRecordsMap[session.id] = {};
@@ -31,7 +31,7 @@ export function exportAttendanceToExcel(classInfo, students, sessions) {
         });
     });
 
-    // Dữ liệu từng thiếu nhi
+    // Dá»¯ liá»‡u tá»«ng thiáº¿u nhi
     students.forEach(student => {
         const row = [student.stt, student.fullName];
 
@@ -43,9 +43,9 @@ export function exportAttendanceToExcel(classInfo, students, sessions) {
         summaryData.push(row);
     });
 
-    // Thêm dòng thống kê
+    // ThÃªm dÃ²ng thá»‘ng kÃª
     summaryData.push([]);
-    const statsRow = ['', 'Tổng có mặt'];
+    const statsRow = ['', 'Tá»•ng cÃ³ máº·t'];
     sessions.forEach(session => {
         const presentCount = session.records.filter(r => r.isPresent).length;
         statsRow.push(presentCount);
@@ -57,13 +57,13 @@ export function exportAttendanceToExcel(classInfo, students, sessions) {
     // Set column widths
     summarySheet['!cols'] = [
         { wch: 5 },  // STT
-        { wch: 25 }, // Họ tên
-        ...sessions.map(() => ({ wch: 15 })) // Các cột ngày
+        { wch: 25 }, // Há» tÃªn
+        ...sessions.map(() => ({ wch: 15 })) // CÃ¡c cá»™t ngÃ y
     ];
 
-    XLSX.utils.book_append_sheet(workbook, summarySheet, 'Tổng hợp');
+    XLSX.utils.book_append_sheet(workbook, summarySheet, 'Tá»•ng há»£p');
 
-    // === SHEET 2: Chi tiết từng buổi ===
+    // === SHEET 2: Chi tiáº¿t tá»«ng buá»•i ===
     const detailData = [];
 
     sessions.forEach((session, index) => {
@@ -72,31 +72,31 @@ export function exportAttendanceToExcel(classInfo, students, sessions) {
         }
 
         const dateStr = new Date(session.attendanceDate).toLocaleDateString('vi-VN');
-        detailData.push([`Ngày: ${dateStr} - ${session.attendanceType}`]);
-        detailData.push(['STT', 'Họ và Tên', 'Có mặt']);
+        detailData.push([`NgÃ y: ${dateStr} - ${session.attendanceType}`]);
+        detailData.push(['STT', 'Há» vÃ  TÃªn', 'CÃ³ máº·t']);
 
         session.records.forEach(record => {
             detailData.push([
                 record.stt,
                 record.fullName,
-                record.isPresent ? 'Có' : 'Vắng'
+                record.isPresent ? 'CÃ³' : 'Váº¯ng'
             ]);
         });
 
         const presentCount = session.records.filter(r => r.isPresent).length;
         const totalCount = session.records.length;
         detailData.push([]);
-        detailData.push(['', 'Tổng kết:', `${presentCount}/${totalCount} em có mặt`]);
+        detailData.push(['', 'Tá»•ng káº¿t:', `${presentCount}/${totalCount} em cÃ³ máº·t`]);
     });
 
     const detailSheet = XLSX.utils.aoa_to_sheet(detailData);
     detailSheet['!cols'] = [
         { wch: 5 },  // STT
-        { wch: 25 }, // Họ tên
-        { wch: 10 }  // Có mặt
+        { wch: 25 }, // Há» tÃªn
+        { wch: 10 }  // CÃ³ máº·t
     ];
 
-    XLSX.utils.book_append_sheet(workbook, detailSheet, 'Chi tiết');
+    XLSX.utils.book_append_sheet(workbook, detailSheet, 'Chi tiáº¿t');
 
     // Convert workbook to buffer
     const excelBuffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
@@ -105,9 +105,9 @@ export function exportAttendanceToExcel(classInfo, students, sessions) {
 }
 
 /**
- * Tạo tên file Excel
- * @param {string} className - Tên lớp
- * @returns {string} Tên file
+ * Táº¡o tÃªn file Excel
+ * @param {string} className - TÃªn lá»›p
+ * @returns {string} TÃªn file
  */
 export function generateExcelFileName(className) {
     const date = new Date().toISOString().split('T')[0];
