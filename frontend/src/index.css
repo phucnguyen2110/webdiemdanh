@@ -271,6 +271,33 @@ p {
   border-radius: var(--radius-md);
   background: var(--color-white);
   transition: all var(--transition-base);
+  /* Prevent text overflow */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  /* Improve mobile performance */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.form-select {
+  /* Ensure proper dropdown appearance */
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23333' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right var(--spacing-md) center;
+  background-size: 12px;
+  padding-right: calc(var(--spacing-md) * 3);
+  /* Prevent jitter on mobile */
+  cursor: pointer;
+  -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
+  /* Hardware acceleration */
+  transform: translate3d(0, 0, 0);
+  -webkit-transform: translate3d(0, 0, 0);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
 }
 
 .form-input:focus,
@@ -278,10 +305,20 @@ p {
   outline: none;
   border-color: var(--color-primary);
   box-shadow: 0 0 0 3px var(--color-primary-light);
+  /* Disable transition on focus to prevent jitter */
+  transition: none;
 }
 
 .form-input::placeholder {
   color: var(--color-gray-300);
+}
+
+/* Dropdown options styling */
+.form-select option {
+  padding: var(--spacing-sm);
+  font-size: var(--font-size-base);
+  background: var(--color-white);
+  color: var(--color-gray-700);
 }
 
 /* File Upload */
@@ -562,10 +599,34 @@ p {
     width: 100%;
   }
 
-  /* Form Elements */
+  /* Form Elements - Prevent zoom on iOS */
   .form-input,
   .form-select {
-    font-size: var(--font-size-sm);
+    /* Use 16px to prevent iOS auto-zoom which causes jitter */
+    font-size: 16px;
+    padding: var(--spacing-sm) var(--spacing-md);
+    /* Prevent zoom and improve touch performance */
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .form-select {
+    background-size: 10px;
+    background-position: right var(--spacing-sm) center;
+    padding-right: calc(var(--spacing-md) * 2.5);
+    /* Improve rendering performance */
+    will-change: auto;
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
+  }
+
+  /* Dropdown options on mobile */
+  .form-select option {
+    font-size: 16px;
+    padding: var(--spacing-xs) var(--spacing-sm);
+    /* Allow text wrapping in options */
+    white-space: normal;
+    word-wrap: break-word;
   }
 
   /* Grid */

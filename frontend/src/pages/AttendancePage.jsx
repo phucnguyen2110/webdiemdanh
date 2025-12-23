@@ -42,7 +42,14 @@ export default function AttendancePage() {
     const loadClasses = async () => {
         try {
             const result = await classesAPI.getAll();
-            setClasses(result.classes);
+            // Transform snake_case to camelCase
+            const transformedClasses = (result.classes || []).map(cls => ({
+                id: cls.id,
+                name: cls.name,
+                createdAt: cls.created_at,
+                studentsCount: cls.students_count
+            }));
+            setClasses(transformedClasses);
         } catch (err) {
             setError('Không thể tải danh sách lớp: ' + err.message);
         }
@@ -91,6 +98,16 @@ export default function AttendancePage() {
         setCheckedStudents(allUnchecked);
     };
 
+    // Helper function to convert Vietnamese to non-diacritics for backend
+    const convertAttendanceType = (type) => {
+        const mapping = {
+            'Học Giáo Lý': 'Hoc Giao Ly',
+            'Lễ Thứ 5': 'Le Thu 5',
+            'Lễ Chúa Nhật': 'Le Chua Nhat'
+        };
+        return mapping[type] || type;
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
 
@@ -120,7 +137,7 @@ export default function AttendancePage() {
             const response = await attendanceAPI.save({
                 classId: parseInt(selectedClassId),
                 attendanceDate,
-                attendanceType,
+                attendanceType: convertAttendanceType(attendanceType),
                 records,
                 attendanceMethod: 'manual'
             });
@@ -132,18 +149,18 @@ export default function AttendancePage() {
 
                 if (failCount === 0) {
                     // All success
-                    setSuccess(`✅ Đã lưu điểm danh thành công! (${presentCount}/${students.length} em có mặt)\n📊 Đã ghi vào Excel thành công!`);
+                    setSuccess(`✅ Đã lưu điểm danh thành công! (${presentCount}/${students.length} thiếu nhi có mặt)\n📊 Đã ghi vào Excel thành công!`);
                 } else if (successCount === 0) {
                     // All failed - show only error, not success
                     const formattedDate = formatVietnameseDate(attendanceDate);
                     setError(`❌ Không thể điểm danh thành công do trong file Excel của lớp không có cột điểm danh ${formattedDate} - ${attendanceType}`);
                 } else {
                     // Partial success
-                    setSuccess(`✅ Đã lưu điểm danh thành công! (${presentCount}/${students.length} em có mặt)\n⚠️ Excel: ${successCount}/${response.excelWriteResults.length} em được ghi thành công.`);
+                    setSuccess(`✅ Đã lưu điểm danh thành công! (${presentCount}/${students.length} thiếu nhi có mặt)\n⚠️ Excel: ${successCount}/${response.excelWriteResults.length} thiếu nhi được ghi thành công.`);
                 }
             } else {
                 // No Excel file or no write attempted
-                setSuccess(`✅ Đã lưu điểm danh thành công! (${presentCount}/${students.length} em có mặt)`);
+                setSuccess(`✅ Đã lưu điểm danh thành công! (${presentCount}/${students.length} thiếu nhi có mặt)`);
             }
 
             // Reset checked state only if not error
@@ -173,7 +190,7 @@ export default function AttendancePage() {
                 <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div>
                         <h2 className="card-title">✅ Điểm Danh Thiếu Nhi</h2>
-                        <p className="card-subtitle">Chọn lớp và đánh dấu các em có mặt</p>
+                        <p className="card-subtitle">Chọn lớp và đánh dấu các thiếu nhi có mặt</p>
                     </div>
                     <button
                         onClick={() => navigate('/qr-scanner')}
@@ -202,7 +219,7 @@ export default function AttendancePage() {
                                 <option value="">-- Chọn lớp --</option>
                                 {classes.map(cls => (
                                     <option key={cls.id} value={cls.id}>
-                                        {cls.name} ({cls.studentsCount} em)
+                                        {cls.name} ({cls.studentsCount} thiếu nhi)
                                     </option>
                                 ))}
                             </select>
@@ -348,7 +365,7 @@ export default function AttendancePage() {
                                 </>
                             ) : (
                                 <>
-                                    💾 Lưu điểm danh {presentCount > 0 ? `(${presentCount} em)` : ''}
+                                    💾 Lưu điểm danh {presentCount > 0 ? `(${presentCount} thiếu nhi)` : ''}
                                 </>
                             )}
                         </button>
@@ -357,7 +374,7 @@ export default function AttendancePage() {
                     {/* Hint message when no students selected */}
                     {students.length > 0 && presentCount === 0 && !loading && !success && !error && (
                         <div className="alert alert-warning" style={{ marginTop: 'var(--spacing-md)' }}>
-                            ⚠️ Vui lòng chọn ít nhất 1 em để lưu điểm danh
+                            ⚠️ Vui lòng chọn ít nhất 1 thiếu nhi để lưu điểm danh
                         </div>
                     )}
                 </form>

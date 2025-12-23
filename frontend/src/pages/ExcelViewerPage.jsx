@@ -36,7 +36,14 @@ export default function ExcelViewerPage() {
     const loadClasses = async () => {
         try {
             const result = await classesAPI.getAll();
-            setClasses(result.classes || []);
+            // Transform snake_case to camelCase
+            const transformedClasses = (result.classes || []).map(cls => ({
+                id: cls.id,
+                name: cls.name,
+                createdAt: cls.created_at,
+                studentsCount: cls.students_count
+            }));
+            setClasses(transformedClasses);
         } catch (err) {
             setError(err.message);
         }
@@ -71,8 +78,10 @@ export default function ExcelViewerPage() {
         if (cell === null || cell === undefined) return '';
 
         // Check if it's a number that could be an Excel date (serial number)
-        // Excel dates are typically between 1 (1/1/1900) and 50000+ (year 2030+)
-        if (typeof cell === 'number' && cell > 1 && cell < 100000) {
+        // Excel dates: Use a higher threshold to avoid converting STT (1,2,3,4...)
+        // 40000 = 2009-07-06, reasonable minimum for attendance dates
+        // This prevents small numbers like 1,2,3,4 from being converted to 1900 dates
+        if (typeof cell === 'number' && cell >= 40000 && cell < 100000) {
             // Check if it looks like a date (no decimals or small decimals)
             const hasSmallDecimal = (cell % 1) < 0.01;
             if (hasSmallDecimal || cell % 1 === 0) {
@@ -222,7 +231,7 @@ export default function ExcelViewerPage() {
                     </label>
                     <select
                         id="classSelect"
-                        className="form-input"
+                        className="form-select"
                         value={selectedClassId}
                         onChange={(e) => handleClassChange(e.target.value)}
                         style={{ maxWidth: '400px' }}

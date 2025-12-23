@@ -27,7 +27,14 @@ export default function FilesPage() {
             setLoading(true);
             setError('');
             const result = await classesAPI.getAll();
-            setClasses(result.classes || []);
+            // Transform snake_case to camelCase
+            const transformedClasses = (result.classes || []).map(cls => ({
+                id: cls.id,
+                name: cls.name,
+                createdAt: cls.created_at,
+                studentsCount: cls.students_count
+            }));
+            setClasses(transformedClasses);
         } catch (err) {
             setError(err.message);
         } finally {
@@ -72,24 +79,44 @@ export default function FilesPage() {
     };
 
     const handleSaveEdit = async (classId) => {
-        if (!editingClassName.trim()) {
+        const trimmedName = editingClassName.trim();
+
+        if (!trimmedName) {
             alert('Tên lớp không được để trống');
+            return;
+        }
+
+        // Check if class name already exists (case-insensitive)
+        const isDuplicate = classes.some(c =>
+            c.id !== classId && c.name.toLowerCase() === trimmedName.toLowerCase()
+        );
+
+        if (isDuplicate) {
+            alert(`Tên lớp "${trimmedName}" đã tồn tại. Vui lòng chọn tên khác.`);
             return;
         }
 
         try {
             setUpdateLoading(classId);
-            await classesAPI.update(classId, editingClassName.trim());
+            await classesAPI.update(classId, trimmedName);
 
             // Update state
             setClasses(prev => prev.map(c =>
-                c.id === classId ? { ...c, name: editingClassName.trim() } : c
+                c.id === classId ? { ...c, name: trimmedName } : c
             ));
 
             setEditingClassId(null);
             setEditingClassName('');
         } catch (err) {
-            alert(`Lỗi khi cập nhật: ${err.message}`);
+            // Handle backend errors
+            const errorMessage = err.message || 'Đã xảy ra lỗi';
+            if (errorMessage.toLowerCase().includes('duplicate') ||
+                errorMessage.toLowerCase().includes('exists') ||
+                errorMessage.toLowerCase().includes('đã tồn tại')) {
+                alert(`Tên lớp "${trimmedName}" đã tồn tại. Vui lòng chọn tên khác.`);
+            } else {
+                alert(`Lỗi khi cập nhật: ${errorMessage}`);
+            }
         } finally {
             setUpdateLoading(null);
         }

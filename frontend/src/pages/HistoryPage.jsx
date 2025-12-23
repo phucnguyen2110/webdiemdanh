@@ -32,7 +32,14 @@ export default function HistoryPage() {
     const loadClasses = async () => {
         try {
             const result = await classesAPI.getAll();
-            setClasses(result.classes);
+            // Transform snake_case to camelCase
+            const transformedClasses = (result.classes || []).map(cls => ({
+                id: cls.id,
+                name: cls.name,
+                createdAt: cls.created_at,
+                studentsCount: cls.students_count
+            }));
+            setClasses(transformedClasses);
         } catch (err) {
             setError('Không thể tải danh sách lớp: ' + err.message);
         }
@@ -117,6 +124,16 @@ export default function HistoryPage() {
         });
     };
 
+    // Helper function to convert backend format to Vietnamese display
+    const formatAttendanceType = (type) => {
+        const mapping = {
+            'Hoc Giao Ly': 'Học Giáo Lý',
+            'Le Thu 5': 'Lễ Thứ 5',
+            'Le Chua Nhat': 'Lễ Chúa Nhật'
+        };
+        return mapping[type] || type;
+    };
+
     return (
         <div className="container" style={{ paddingTop: '2rem', paddingBottom: '2rem' }}>
             <div className="card">
@@ -129,7 +146,7 @@ export default function HistoryPage() {
                         <button
                             className="btn btn-success"
                             onClick={handleExport}
-                            disabled={!selectedClassId || exporting}
+                            disabled={!selectedClassId || exporting || sessions.length === 0}
                         >
                             {exporting ? (
                                 <>
@@ -186,7 +203,7 @@ export default function HistoryPage() {
                         <option value="">-- Chọn lớp --</option>
                         {classes.map(cls => (
                             <option key={cls.id} value={cls.id}>
-                                {cls.name} ({cls.studentsCount} em)
+                                {cls.name} ({cls.studentsCount} thiếu nhi)
                             </option>
                         ))}
                     </select>
@@ -248,14 +265,14 @@ export default function HistoryPage() {
                                                 {formatDate(session.attendanceDate)}
                                             </div>
                                             <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-gray-500)', marginBottom: 'var(--spacing-xs)' }}>
-                                                {session.attendanceType}
+                                                {formatAttendanceType(session.attendanceType)}
                                             </div>
                                             <div style={{ fontSize: 'var(--font-size-sm)' }}>
                                                 <span style={{ color: 'var(--color-success)', fontWeight: '600' }}>
                                                     {session.presentCount}
                                                 </span>
                                                 <span style={{ color: 'var(--color-gray-400)' }}>
-                                                    {' / '}{session.totalCount} em
+                                                    {' / '}{session.totalCount} thiếu nhi
                                                 </span>
                                             </div>
                                         </div>
@@ -304,7 +321,7 @@ export default function HistoryPage() {
                                             <strong>Ngày:</strong> {formatDate(sessionDetails.session.attendanceDate)}
                                         </div>
                                         <div style={{ marginBottom: 'var(--spacing-sm)' }}>
-                                            <strong>Loại:</strong> {sessionDetails.session.attendanceType}
+                                            <strong>Loại:</strong> {formatAttendanceType(sessionDetails.session.attendanceType)}
                                         </div>
                                         <div>
                                             <strong>Lớp:</strong> {sessionDetails.session.className}

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { classesAPI } from '../services/api';
 
 export default function UploadPage() {
@@ -7,6 +7,21 @@ export default function UploadPage() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
+    const [existingClasses, setExistingClasses] = useState([]);
+
+    // Load existing classes on mount
+    useEffect(() => {
+        loadExistingClasses();
+    }, []);
+
+    const loadExistingClasses = async () => {
+        try {
+            const result = await classesAPI.getAll();
+            setExistingClasses(result.classes || []);
+        } catch (err) {
+            console.error('Failed to load existing classes:', err);
+        }
+    };
 
     const handleFileChange = (e) => {
         const selectedFile = e.target.files[0];
@@ -25,8 +40,19 @@ export default function UploadPage() {
             return;
         }
 
-        if (!className.trim()) {
+        const trimmedClassName = className.trim();
+        if (!trimmedClassName) {
             setError('Vui lòng nhập tên lớp');
+            return;
+        }
+
+        // Check for duplicate class name (case-insensitive)
+        const isDuplicate = existingClasses.some(cls =>
+            cls.name.toLowerCase() === trimmedClassName.toLowerCase()
+        );
+
+        if (isDuplicate) {
+            setError(`Tên lớp "${trimmedClassName}" đã tồn tại. Vui lòng chọn tên khác.`);
             return;
         }
 
@@ -35,7 +61,7 @@ export default function UploadPage() {
         setSuccess('');
 
         try {
-            const result = await classesAPI.upload(file, className.trim());
+            const result = await classesAPI.upload(file, trimmedClassName);
             setSuccess(`✅ Đã tạo lớp "${result.className}" với ${result.studentsCount} thiếu nhi`);
 
             // Reset form
@@ -43,8 +69,19 @@ export default function UploadPage() {
             setClassName('');
             document.getElementById('file-input').value = '';
 
+            // Reload existing classes
+            await loadExistingClasses();
+
         } catch (err) {
-            setError(err.message);
+            // Handle backend errors
+            const errorMessage = err.message || 'Đã xảy ra lỗi';
+            if (errorMessage.toLowerCase().includes('duplicate') ||
+                errorMessage.toLowerCase().includes('exists') ||
+                errorMessage.toLowerCase().includes('đã tồn tại')) {
+                setError(`Tên lớp "${trimmedClassName}" đã tồn tại. Vui lòng chọn tên khác.`);
+            } else {
+                setError(errorMessage);
+            }
         } finally {
             setLoading(false);
         }

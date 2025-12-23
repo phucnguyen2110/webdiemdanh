@@ -30,7 +30,14 @@ export default function QRScannerPage() {
     const loadClasses = async () => {
         try {
             const response = await classesAPI.getAll();
-            setClasses(response.classes || response || []);
+            // Transform snake_case to camelCase
+            const transformedClasses = (response.classes || response || []).map(cls => ({
+                id: cls.id,
+                name: cls.name,
+                createdAt: cls.created_at,
+                studentsCount: cls.students_count
+            }));
+            setClasses(transformedClasses);
         } catch (err) {
             setError('Không thể tải danh sách lớp: ' + err.message);
         }
@@ -152,6 +159,16 @@ export default function QRScannerPage() {
         return `${days[date.getDay()]}, ${date.getDate()} tháng ${date.getMonth() + 1}, ${date.getFullYear()}`;
     };
 
+    // Helper function to convert Vietnamese to non-diacritics for backend
+    const convertAttendanceType = (type) => {
+        const mapping = {
+            'Học Giáo Lý': 'Hoc Giao Ly',
+            'Lễ Thứ 5': 'Le Thu 5',
+            'Lễ Chúa Nhật': 'Le Chua Nhat'
+        };
+        return mapping[type] || type;
+    };
+
     const onScanSuccess = async (decodedText) => {
         try {
             const studentData = JSON.parse(decodedText);
@@ -176,7 +193,7 @@ export default function QRScannerPage() {
             const saveResponse = await attendanceAPI.save({
                 classId: parseInt(selectedClassId),
                 attendanceDate,
-                attendanceType,
+                attendanceType: convertAttendanceType(attendanceType),
                 records: [{
                     studentId: studentData.studentId,
                     isPresent: true
@@ -224,7 +241,7 @@ export default function QRScannerPage() {
                             </label>
                             <select
                                 id="classSelect"
-                                className="form-input"
+                                className="form-select"
                                 value={selectedClassId}
                                 onChange={(e) => setSelectedClassId(e.target.value)}
                             >
@@ -266,7 +283,7 @@ export default function QRScannerPage() {
                             </label>
                             <select
                                 id="attendanceType"
-                                className="form-input"
+                                className="form-select"
                                 value={attendanceType}
                                 onChange={(e) => setAttendanceType(e.target.value)}
                             >
@@ -312,7 +329,7 @@ export default function QRScannerPage() {
 
                         {/* Scanned list */}
                         <div style={{ marginBottom: 'var(--spacing-lg)' }}>
-                            <h4>Đã điểm danh: {scannedStudents.length} em</h4>
+                            <h4>Đã điểm danh: {scannedStudents.length} thiếu nhi</h4>
                             <div style={{ maxHeight: '200px', overflowY: 'auto', marginTop: 'var(--spacing-md)' }}>
                                 {scannedStudents.map((student, idx) => (
                                     <div key={idx} className="alert alert-success" style={{ marginBottom: 'var(--spacing-sm)' }}>
