@@ -16,6 +16,7 @@ export default function QRScannerPage() {
 
     const scannerRef = useRef(null);
     const html5QrCodeRef = useRef(null);
+    const processingStudents = useRef(new Set()); // Track students being processed
 
     useEffect(() => {
         loadClasses();
@@ -54,6 +55,7 @@ export default function QRScannerPage() {
 
     const stopScanning = async () => {
         setScanning(false);
+        processingStudents.current.clear(); // Clear processing set when stopping
         // Cleanup will happen in useEffect
     };
 
@@ -177,52 +179,79 @@ export default function QRScannerPage() {
         return `${days[date.getDay()]}, ${date.getDate()} tháng ${date.getMonth() + 1}, ${date.getFullYear()}`;
     };
 
+    // Helper function to convert Vietnamese to non-diacritics for backend
+    const convertAttendanceType = (type) => {
+        const mapping = {
+            'Học Giáo Lý': 'Hoc Giao Ly',
+            'Lễ Thứ 5': 'Le Thu 5',
+            'Lễ Chúa Nhật': 'Le Chua Nhat'
+        };
+        return mapping[type] || type;
+    };
+
     const onScanSuccess = async (decodedText) => {
         try {
             const studentData = JSON.parse(decodedText);
 
-            // Validate: Check if student belongs to selected class
-            const response = await classesAPI.getStudents(selectedClassId);
-            const classStudents = response.students || response || [];
-            const studentInClass = classStudents.find(s => s.id === studentData.studentId);
-
-            if (!studentInClass) {
-                setError(`❌ Thiếu nhi "${studentData.studentName}" không thuộc lớp đã chọn!`);
+            // Check if this student is already being processed
+            if (processingStudents.current.has(studentData.studentId)) {
+                console.log('Student already being processed, skipping...');
                 return;
             }
 
-            // Check if already scanned
+            // Check if already scanned (in final list)
             if (scannedStudents.find(s => s.studentId === studentData.studentId)) {
+                setError(''); // Clear any previous error
                 setSuccess(`✅ ${studentData.studentName} đã được điểm danh rồi`);
                 return;
             }
 
-            // Save attendance
-            const saveResponse = await attendanceAPI.save({
-                classId: parseInt(selectedClassId),
-                attendanceDate,
-                attendanceType,
-                records: [{
-                    studentId: studentData.studentId,
-                    isPresent: true
-                }],
-                attendanceMethod: 'qr'
-            });
+            // Mark as processing
+            processingStudents.current.add(studentData.studentId);
 
-            // Check Excel write results
-            if (saveResponse.excelWriteResults && saveResponse.excelWriteResults.length > 0) {
-                const successCount = saveResponse.excelWriteResults.filter(r => r.success).length;
+            try {
+                // Validate: Check if student belongs to selected class
+                const response = await classesAPI.getStudents(selectedClassId);
+                const classStudents = response.students || response || [];
+                const studentInClass = classStudents.find(s => s.id === studentData.studentId);
 
-                if (successCount === 0) {
-                    // Excel write failed - show error
-                    const formattedDate = formatVietnameseDate(attendanceDate);
-                    setError(`❌ Không thể điểm danh thành công do trong file Excel của lớp không có cột điểm danh ${formattedDate} - ${attendanceType}`);
+                if (!studentInClass) {
+                    setError(`❌ Thiếu nhi "${studentData.studentName}" không thuộc lớp đã chọn!`);
                     return;
                 }
-            }
 
-            setScannedStudents(prev => [...prev, studentData]);
-            setSuccess(`✅ Đã điểm danh: ${studentData.studentName}`);
+                // Save attendance
+                const saveResponse = await attendanceAPI.save({
+                    classId: parseInt(selectedClassId),
+                    attendanceDate,
+                    attendanceType: convertAttendanceType(attendanceType),
+                    records: [{
+                        studentId: studentData.studentId,
+                        isPresent: true
+                    }],
+                    attendanceMethod: 'qr'
+                });
+
+                // Check Excel write results
+                if (saveResponse.excelWriteResults && saveResponse.excelWriteResults.length > 0) {
+                    const successCount = saveResponse.excelWriteResults.filter(r => r.success).length;
+
+                    if (successCount === 0) {
+                        // Excel write failed - show error
+                        const formattedDate = formatVietnameseDate(attendanceDate);
+                        setError(`❌ Không thể điểm danh thành công do trong file Excel của lớp không có cột điểm danh ${formattedDate} - ${attendanceType}`);
+                        return;
+                    }
+                }
+
+                setScannedStudents(prev => [...prev, studentData]);
+                const formattedDate = formatVietnameseDate(attendanceDate);
+                setError(''); // Clear any previous error
+                setSuccess(`✅ ${formattedDate}\nĐã điểm danh thành công: ${studentData.studentName}`);
+            } finally {
+                // Always remove from processing set
+                processingStudents.current.delete(studentData.studentId);
+            }
         } catch (err) {
             setError(`Lỗi khi điểm danh: ${err.message}`);
         }
