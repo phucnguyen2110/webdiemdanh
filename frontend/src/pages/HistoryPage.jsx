@@ -176,7 +176,7 @@ export default function HistoryPage() {
                     <div style={{ fontSize: '1.5rem', flexShrink: 0 }}>ℹ️</div>
                     <div>
                         <strong style={{ color: '#1565c0', display: 'block', marginBottom: 'var(--spacing-xs)' }}>
-                            Lưu ý về lịch sử điểm danh
+                            Lịch sử điểm danh
                         </strong>
                         <p style={{
                             color: '#1976d2',
@@ -184,7 +184,7 @@ export default function HistoryPage() {
                             margin: 0,
                             lineHeight: '1.5'
                         }}>
-                            Trang này chỉ hiển thị lịch sử điểm danh thủ công. Điểm danh bằng QR Code không được lưu vào lịch sử.
+                            Trang này hiển thị tất cả lịch sử điểm danh (cả thủ công và quét mã QR). Bạn có thể xem chi tiết và xóa các buổi điểm danh.
                         </p>
                     </div>
                 </div>
@@ -266,6 +266,16 @@ export default function HistoryPage() {
                                             </div>
                                             <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-gray-500)', marginBottom: 'var(--spacing-xs)' }}>
                                                 {formatAttendanceType(session.attendanceType)}
+                                            </div>
+                                            <div style={{
+                                                fontSize: 'var(--font-size-sm)',
+                                                color: 'var(--color-gray-600)',
+                                                marginBottom: 'var(--spacing-xs)',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: 'var(--spacing-xs)'
+                                            }}>
+                                                {session.attendanceMethod === 'qr' ? '📱 Quét mã QR' : '✍️ Thủ công'}
                                             </div>
                                             <div style={{ fontSize: 'var(--font-size-sm)' }}>
                                                 <span style={{ color: 'var(--color-success)', fontWeight: '600' }}>

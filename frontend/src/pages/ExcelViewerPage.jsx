@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { classesAPI } from '../services/api';
 import { getCachedExcel, setCachedExcel } from '../utils/excelCache';
+import { mergeAttendanceIntoExcel, getAttendanceStats, isPresent, getAttendanceCellColor } from '../utils/excelMerger';
 
 export default function ExcelViewerPage() {
     const [classes, setClasses] = useState([]);
@@ -14,6 +15,7 @@ export default function ExcelViewerPage() {
     const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
     const [isFromCache, setIsFromCache] = useState(false);
     const [lastUpdated, setLastUpdated] = useState(null);
+    const [attendanceStats, setAttendanceStats] = useState(null);
 
     // Load all classes on mount
     useEffect(() => {
@@ -82,14 +84,22 @@ export default function ExcelViewerPage() {
                 // Step 3: Compare timestamps
                 if (cached.timestamp === result.lastUpdated) {
                     console.log('✅ Cache valid! Using cached data');
+
+                    // Use cached merged data (already merged when saved)
                     setSheets(cached.data.sheets || []);
                     setClassName(cached.data.className || '');
                     setLastUpdated(cached.timestamp);
                     setIsFromCache(true);
+
+                    // Use cached stats if available
+                    if (cached.data.attendanceStats) {
+                        setAttendanceStats(cached.data.attendanceStats);
+                    }
+
                     setLoading(false);
                     return;
                 } else {
-                    console.log('⚠️ Cache outdated, fetching fresh data');
+                    console.log('⚠️ Cache outdated (timestamp changed), fetching fresh data');
                 }
             }
 
@@ -97,14 +107,31 @@ export default function ExcelViewerPage() {
             console.log('📥 Fetching fresh Excel data from server');
             const result = await classesAPI.getExcelSheets(classId);
 
-            setSheets(result.sheets || []);
+            // Merge attendance data into sheets
+            const mergedSheets = result.attendanceData
+                ? mergeAttendanceIntoExcel(result.sheets || [], result.attendanceData)
+                : result.sheets || [];
+
+            setSheets(mergedSheets);
             setClassName(result.className || '');
             setLastUpdated(result.lastUpdated);
 
-            // Step 5: Save to cache
+            // Calculate stats
+            let stats = null;
+            if (result.attendanceData) {
+                stats = getAttendanceStats(result.attendanceData);
+                setAttendanceStats(stats);
+            }
+
+            // Step 5: Save to cache (with merged data and stats)
             if (result.lastUpdated) {
-                setCachedExcel(classId, result, result.lastUpdated);
-                console.log('💾 Data cached for future use');
+                const dataToCache = {
+                    ...result,
+                    sheets: mergedSheets,  // Save merged sheets
+                    attendanceStats: stats  // Save calculated stats
+                };
+                setCachedExcel(classId, dataToCache, result.lastUpdated);
+                console.log('💾 Data cached for future use (with merged attendance)');
             }
 
         } catch (err) {
@@ -187,20 +214,30 @@ export default function ExcelViewerPage() {
                             <tr key={rowIndex} style={{
                                 background: rowIndex === 0 ? 'var(--color-gray-100)' : 'white'
                             }}>
-                                {row.map((cell, cellIndex) => (
-                                    <td
-                                        key={cellIndex}
-                                        style={{
-                                            padding: 'var(--spacing-sm)',
-                                            border: '1px solid var(--color-gray-200)',
-                                            fontWeight: rowIndex === 0 ? '600' : '400',
-                                            whiteSpace: 'nowrap',
-                                            minWidth: '100px'
-                                        }}
-                                    >
-                                        {formatCellValue(cell)}
-                                    </td>
-                                ))}
+                                {row.map((cell, cellIndex) => {
+                                    const cellValue = formatCellValue(cell);
+                                    const isAttendanceMark = isPresent(cellValue);
+
+                                    return (
+                                        <td
+                                            key={cellIndex}
+                                            style={{
+                                                padding: 'var(--spacing-sm)',
+                                                border: '1px solid var(--color-gray-200)',
+                                                whiteSpace: rowIndex === 0 ? 'pre-line' : 'nowrap',
+                                                minWidth: '100px',
+                                                background: isAttendanceMark && rowIndex > 0
+                                                    ? getAttendanceCellColor(cellValue)
+                                                    : 'inherit',
+                                                color: isAttendanceMark ? '#28a745' : 'inherit',
+                                                fontWeight: isAttendanceMark ? '700' : (rowIndex === 0 ? '600' : '400'),
+                                                textAlign: 'left'
+                                            }}
+                                        >
+                                            {cellValue}
+                                        </td>
+                                    );
+                                })}
                             </tr>
                         ))}
                     </tbody>

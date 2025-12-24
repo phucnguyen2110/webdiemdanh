@@ -248,7 +248,7 @@ export default function QRScannerPage() {
                 setScannedStudents(prev => [...prev, studentData]);
                 const formattedDate = formatVietnameseDate(attendanceDate);
                 setError(''); // Clear any previous error
-                setSuccess(`✅ ${formattedDate}\nĐã điểm danh thành công: ${studentData.studentName}`);
+                setSuccess(`✅ ${formattedDate}\n - Đã điểm danh thành công: ${studentData.studentName}`);
 
                 // Invalidate Excel cache for this class
                 invalidateCache(selectedClassId);
@@ -371,7 +371,7 @@ export default function QRScannerPage() {
 
                         {/* Scanned list */}
                         <div style={{ marginBottom: 'var(--spacing-lg)' }}>
-                            <h4>Đã điểm danh: {scannedStudents.length} em</h4>
+                            <h4>Đã điểm danh: {scannedStudents.length} thiếu nhi</h4>
                             <div style={{ maxHeight: '200px', overflowY: 'auto', marginTop: 'var(--spacing-md)' }}>
                                 {scannedStudents.map((student, idx) => (
                                     <div key={idx} className="alert alert-success" style={{ marginBottom: 'var(--spacing-sm)' }}>

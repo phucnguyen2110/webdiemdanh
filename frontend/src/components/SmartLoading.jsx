@@ -141,7 +141,6 @@ export default function SmartLoading({ message = 'Đang tải...', isFirstReques
                     borderRadius: 'var(--radius-md)',
                     padding: isMobile ? 'var(--spacing-sm)' : 'var(--spacing-md)',
                     maxWidth: isMobile ? '100%' : '500px',
-                    marginTop: 'var(--spacing-md)',
                     fontSize: isMobile ? '0.8rem' : 'var(--font-size-sm)',
                     color: '#856404',
                     margin: '0 var(--spacing-sm)',
@@ -162,7 +161,6 @@ export default function SmartLoading({ message = 'Đang tải...', isFirstReques
             {/* Tips */}
             {elapsed > 5 && (
                 <div style={{
-                    marginTop: 'var(--spacing-lg)',
                     padding: isMobile ? 'var(--spacing-sm)' : 'var(--spacing-md)',
                     background: 'var(--color-gray-50)',
                     borderRadius: 'var(--radius-md)',
