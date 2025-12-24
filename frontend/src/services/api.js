@@ -1,16 +1,32 @@
 import axios from 'axios';
 
+// Track last request time for cold start detection
+let lastRequestTime = Date.now();
+const COLD_START_THRESHOLD = 15 * 60 * 1000; // 15 minutes
+
 // Tạo axios instance
 const api = axios.create({
     baseURL: import.meta.env.VITE_API_URL || '/api',
     headers: {
         'Content-Type': 'application/json'
-    }
+    },
+    timeout: 90000 // 90 seconds timeout for cold starts
 });
+
+// Helper to check if this might be a cold start
+export const isPotentiallyColdStart = () => {
+    const timeSinceLastRequest = Date.now() - lastRequestTime;
+    return timeSinceLastRequest > COLD_START_THRESHOLD;
+};
 
 // Request interceptor
 api.interceptors.request.use(
     (config) => {
+        // Mark if this might be a cold start
+        config.metadata = {
+            startTime: Date.now(),
+            isPotentiallyColdStart: isPotentiallyColdStart()
+        };
         return config;
     },
     (error) => {
@@ -21,6 +37,15 @@ api.interceptors.request.use(
 // Response interceptor
 api.interceptors.response.use(
     (response) => {
+        // Update last request time on successful response
+        lastRequestTime = Date.now();
+
+        // Log slow requests (potential cold starts)
+        const duration = Date.now() - response.config.metadata.startTime;
+        if (duration > 5000) {
+            console.log(`⏱️ Slow request detected: ${response.config.url} took ${duration}ms`);
+        }
+
         return response.data;
     },
     (error) => {

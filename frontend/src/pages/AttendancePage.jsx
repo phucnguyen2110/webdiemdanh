@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { classesAPI, attendanceAPI } from '../services/api';
+import { invalidateCache } from '../utils/excelCache';
 
 export default function AttendancePage() {
     const navigate = useNavigate();
@@ -167,6 +168,10 @@ export default function AttendancePage() {
             if (!error) {
                 handleUncheckAll();
             }
+
+            // Invalidate Excel cache for this class
+            invalidateCache(selectedClassId);
+            console.log('💾 Excel cache invalidated for class', selectedClassId);
 
         } catch (err) {
             setError(err.message);

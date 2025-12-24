@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { classesAPI, exportAPI, studentsAPI } from '../services/api';
+import { classesAPI, exportAPI, studentsAPI, isPotentiallyColdStart } from '../services/api';
 import qrIcon from '../assets/qr-icon.png';
+import SmartLoading from '../components/SmartLoading';
 
 export default function FilesPage() {
     const [classes, setClasses] = useState([]);
@@ -16,6 +17,7 @@ export default function FilesPage() {
     const [qrModalOpen, setQrModalOpen] = useState(false);
     const [selectedStudentQR, setSelectedStudentQR] = useState(null);
     const [qrLoading, setQrLoading] = useState(false);
+    const [isFirstLoad, setIsFirstLoad] = useState(true);
 
     // Load all classes on mount
     useEffect(() => {
@@ -39,6 +41,7 @@ export default function FilesPage() {
             setError(err.message);
         } finally {
             setLoading(false);
+            setIsFirstLoad(false);
         }
     };
 

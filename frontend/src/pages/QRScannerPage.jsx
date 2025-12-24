@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Html5Qrcode } from 'html5-qrcode';
 import { classesAPI, attendanceAPI } from '../services/api';
+import { invalidateCache } from '../utils/excelCache';
 
 export default function QRScannerPage() {
     const [classes, setClasses] = useState([]);
@@ -248,6 +249,10 @@ export default function QRScannerPage() {
                 const formattedDate = formatVietnameseDate(attendanceDate);
                 setError(''); // Clear any previous error
                 setSuccess(`✅ ${formattedDate}\nĐã điểm danh thành công: ${studentData.studentName}`);
+
+                // Invalidate Excel cache for this class
+                invalidateCache(selectedClassId);
+                console.log('💾 Excel cache invalidated for class', selectedClassId);
             } finally {
                 // Always remove from processing set
                 processingStudents.current.delete(studentData.studentId);

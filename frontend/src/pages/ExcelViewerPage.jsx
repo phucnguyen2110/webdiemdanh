@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { classesAPI } from '../services/api';
+import { getCachedExcel, setCachedExcel } from '../utils/excelCache';
 
 export default function ExcelViewerPage() {
     const [classes, setClasses] = useState([]);
@@ -11,6 +12,8 @@ export default function ExcelViewerPage() {
     const [className, setClassName] = useState('');
     const [isPortrait, setIsPortrait] = useState(window.innerWidth < window.innerHeight);
     const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+    const [isFromCache, setIsFromCache] = useState(false);
+    const [lastUpdated, setLastUpdated] = useState(null);
 
     // Load all classes on mount
     useEffect(() => {
@@ -54,6 +57,8 @@ export default function ExcelViewerPage() {
             setSelectedClassId('');
             setSheets([]);
             setClassName('');
+            setIsFromCache(false);
+            setLastUpdated(null);
             return;
         }
 
@@ -62,15 +67,59 @@ export default function ExcelViewerPage() {
         setError('');
         setSheets([]);
         setActiveSheetIndex(0);
+        setIsFromCache(false);
 
         try {
+            // Step 1: Check cache first
+            const cached = getCachedExcel(classId);
+
+            if (cached) {
+                console.log('📦 Found cached data, validating timestamp...');
+
+                // Step 2: Fetch to check timestamp (lightweight - backend optimized)
+                const result = await classesAPI.getExcelSheets(classId);
+
+                // Step 3: Compare timestamps
+                if (cached.timestamp === result.lastUpdated) {
+                    console.log('✅ Cache valid! Using cached data');
+                    setSheets(cached.data.sheets || []);
+                    setClassName(cached.data.className || '');
+                    setLastUpdated(cached.timestamp);
+                    setIsFromCache(true);
+                    setLoading(false);
+                    return;
+                } else {
+                    console.log('⚠️ Cache outdated, fetching fresh data');
+                }
+            }
+
+            // Step 4: Cache miss or invalid - fetch full data
+            console.log('📥 Fetching fresh Excel data from server');
             const result = await classesAPI.getExcelSheets(classId);
+
             setSheets(result.sheets || []);
             setClassName(result.className || '');
+            setLastUpdated(result.lastUpdated);
+
+            // Step 5: Save to cache
+            if (result.lastUpdated) {
+                setCachedExcel(classId, result, result.lastUpdated);
+                console.log('💾 Data cached for future use');
+            }
+
         } catch (err) {
             setError(err.message);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleRefresh = () => {
+        if (selectedClassId) {
+            // Force reload by invalidating cache
+            const { invalidateCache } = require('../utils/excelCache');
+            invalidateCache(selectedClassId);
+            handleClassChange(selectedClassId);
         }
     };
 
@@ -244,6 +293,49 @@ export default function ExcelViewerPage() {
                         ))}
                     </select>
                 </div>
+
+                {/* Cache Status & Refresh Button */}
+                {selectedClassId && (
+                    <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 'var(--spacing-md)',
+                        marginTop: 'var(--spacing-md)',
+                        padding: 'var(--spacing-sm)',
+                        background: isFromCache ? '#e8f5e9' : '#f5f5f5',
+                        borderRadius: 'var(--radius-md)',
+                        border: `1px solid ${isFromCache ? '#4caf50' : '#e0e0e0'}`
+                    }}>
+                        <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 'var(--spacing-xs)' }}>
+                            {isFromCache && (
+                                <span style={{ fontSize: '1.2rem' }}>⚡</span>
+                            )}
+                            <span style={{
+                                fontSize: 'var(--font-size-sm)',
+                                color: isFromCache ? '#2e7d32' : '#666'
+                            }}>
+                                {isFromCache ? 'Loaded from cache (instant)' : 'Loaded from server'}
+                                {lastUpdated && (
+                                    <span style={{ marginLeft: 'var(--spacing-xs)', color: '#999' }}>
+                                        • Updated: {new Date(lastUpdated).toLocaleString('vi-VN')}
+                                    </span>
+                                )}
+                            </span>
+                        </div>
+                        <button
+                            onClick={handleRefresh}
+                            className="btn btn-secondary"
+                            style={{
+                                padding: 'var(--spacing-xs) var(--spacing-sm)',
+                                fontSize: 'var(--font-size-sm)',
+                                whiteSpace: 'nowrap'
+                            }}
+                            disabled={loading}
+                        >
+                            🔄 Refresh
+                        </button>
+                    </div>
+                )}
 
                 {/* Error Message */}
                 {error && (
