@@ -1,15 +1,32 @@
 import { Link, useLocation } from 'react-router-dom';
+import { useState, useEffect } from 'react';
 
 export default function Navigation() {
     const location = useLocation();
+    const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
-    const navItems = [
+    // Detect mobile on resize
+    useEffect(() => {
+        const handleResize = () => {
+            setIsMobile(window.innerWidth < 768);
+        };
+
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
+
+    const allNavItems = [
         { path: '/', label: '📤 Upload', icon: '📤', shortLabel: 'Upload' },
         { path: '/files', label: '📚 Quản lý', icon: '📚', shortLabel: 'Quản lý' },
-        { path: '/excel-viewer', label: '📊 Xem Excel', icon: '📊', shortLabel: 'Excel' },
+        { path: '/excel-viewer', label: '📊 Xem Excel', icon: '📊', shortLabel: 'Excel', desktopOnly: true },
         { path: '/attendance', label: '✅ Điểm danh', icon: '✅', shortLabel: 'Điểm danh' },
         { path: '/history', label: '📜 Lịch sử', icon: '📜', shortLabel: 'Lịch sử' }
     ];
+
+    // Filter out desktop-only items on mobile
+    const navItems = isMobile
+        ? allNavItems.filter(item => !item.desktopOnly)
+        : allNavItems;
 
     return (
         <nav style={{
@@ -28,12 +45,24 @@ export default function Navigation() {
                 }}>
                     {/* Logo */}
                     <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 'var(--spacing-sm)',
                         fontSize: 'clamp(1rem, 4vw, 1.5rem)',
                         fontWeight: '700',
                         color: 'var(--color-white)',
                         whiteSpace: 'nowrap'
                     }}>
-                        ⛪ Quản Lý Thiếu Nhi
+                        <img
+                            src="/logo.png"
+                            alt="Logo Thiếu Nhi Thánh Thể"
+                            style={{
+                                height: '32px',
+                                width: 'auto',
+                                objectFit: 'contain'
+                            }}
+                        />
+                        <span>Quản Lý Thiếu Nhi</span>
                     </div>
 
                     {/* Nav Links */}

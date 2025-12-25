@@ -12,7 +12,6 @@ export default function ExcelViewerPage() {
     const [error, setError] = useState('');
     const [className, setClassName] = useState('');
     const [isPortrait, setIsPortrait] = useState(window.innerWidth < window.innerHeight);
-    const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
     const [isFromCache, setIsFromCache] = useState(false);
     const [lastUpdated, setLastUpdated] = useState(null);
     const [attendanceStats, setAttendanceStats] = useState(null);
@@ -26,7 +25,6 @@ export default function ExcelViewerPage() {
     useEffect(() => {
         const handleResize = () => {
             setIsPortrait(window.innerWidth < window.innerHeight);
-            setIsMobile(window.innerWidth < 768);
         };
 
         window.addEventListener('resize', handleResize);
@@ -392,101 +390,6 @@ export default function ExcelViewerPage() {
                 {/* Sheets Display */}
                 {!loading && sheets.length > 0 && (
                     <div style={{ marginTop: 'var(--spacing-lg)', position: 'relative' }}>
-                        {/* Mobile Warning Overlay */}
-                        {isMobile && (
-                            <div style={{
-                                position: 'fixed',
-                                top: 0,
-                                left: 0,
-                                right: 0,
-                                bottom: 0,
-                                background: 'rgba(0, 0, 0, 0.95)',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                zIndex: 9999,
-                                padding: 'var(--spacing-xl)'
-                            }}>
-                                <div style={{
-                                    textAlign: 'center',
-                                    color: 'white',
-                                    maxWidth: '400px'
-                                }}>
-                                    <div style={{ fontSize: '4rem', marginBottom: 'var(--spacing-lg)' }}>
-                                        💻
-                                    </div>
-                                    <h3 style={{ marginBottom: 'var(--spacing-md)', color: 'white' }}>
-                                        Tính năng chỉ có trên Desktop
-                                    </h3>
-                                    <p style={{ color: 'rgba(255, 255, 255, 0.8)', lineHeight: '1.6', marginBottom: 'var(--spacing-xl)' }}>
-                                        Tính năng xem file Excel chỉ khả dụng trên máy tính để bàn (Desktop).
-                                        Vui lòng sử dụng máy tính hoặc laptop để truy cập tính năng này.
-                                    </p>
-
-                                    {/* Navigation buttons */}
-                                    <div style={{
-                                        display: 'flex',
-                                        flexDirection: 'column',
-                                        gap: 'var(--spacing-sm)'
-                                    }}>
-                                        <a
-                                            href="/files"
-                                            style={{
-                                                padding: 'var(--spacing-md)',
-                                                background: 'linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%)',
-                                                color: 'white',
-                                                textDecoration: 'none',
-                                                borderRadius: 'var(--radius-md)',
-                                                fontWeight: '500',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
-                                                gap: 'var(--spacing-sm)'
-                                            }}
-                                        >
-                                            📚 Đi tới Quản lý
-                                        </a>
-                                        <a
-                                            href="/attendance"
-                                            style={{
-                                                padding: 'var(--spacing-md)',
-                                                background: 'rgba(255, 255, 255, 0.1)',
-                                                color: 'white',
-                                                textDecoration: 'none',
-                                                borderRadius: 'var(--radius-md)',
-                                                fontWeight: '500',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
-                                                gap: 'var(--spacing-sm)',
-                                                border: '1px solid rgba(255, 255, 255, 0.2)'
-                                            }}
-                                        >
-                                            ✅ Đi tới Điểm danh
-                                        </a>
-                                        <a
-                                            href="/"
-                                            style={{
-                                                padding: 'var(--spacing-md)',
-                                                background: 'rgba(255, 255, 255, 0.1)',
-                                                color: 'white',
-                                                textDecoration: 'none',
-                                                borderRadius: 'var(--radius-md)',
-                                                fontWeight: '500',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
-                                                gap: 'var(--spacing-sm)',
-                                                border: '1px solid rgba(255, 255, 255, 0.2)'
-                                            }}
-                                        >
-                                            📤 Đi tới Upload
-                                        </a>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-
                         <h3 style={{ marginBottom: 'var(--spacing-md)', fontSize: 'var(--font-size-lg)' }}>
                             File: {className}
                         </h3>
