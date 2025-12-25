@@ -163,9 +163,9 @@ export const exportAPI = {
         const link = document.createElement('a');
         link.href = url;
 
-        // Lấy tên file từ header
+        // Lấy tên file từ header hoặc tạo tên mặc định
         const contentDisposition = response.headers['content-disposition'];
-        let fileName = 'Excel_Updated.xlsx';
+        let fileName = 'FileTong.xlsx';
         if (contentDisposition) {
             const fileNameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
             if (fileNameMatch && fileNameMatch[1]) {
