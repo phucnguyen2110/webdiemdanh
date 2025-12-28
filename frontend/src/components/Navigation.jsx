@@ -1,8 +1,10 @@
 import { Link, useLocation } from 'react-router-dom';
 import { useState, useEffect } from 'react';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function Navigation() {
     const location = useLocation();
+    const { user, isAdmin, logout } = useAuth();
     const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
     // Detect mobile on resize
@@ -15,12 +17,20 @@ export default function Navigation() {
         return () => window.removeEventListener('resize', handleResize);
     }, []);
 
+    const handleLogout = () => {
+        if (confirm('Bạn có chắc muốn đăng xuất?')) {
+            logout();
+        }
+    };
+
     const allNavItems = [
         { path: '/', label: '📤 Upload', icon: '📤', shortLabel: 'Upload' },
         { path: '/files', label: '📚 Quản lý', icon: '📚', shortLabel: 'Quản lý' },
         { path: '/excel-viewer', label: '📊 Xem Excel', icon: '📊', shortLabel: 'Excel', desktopOnly: true },
         { path: '/attendance', label: '✅ Điểm danh', icon: '✅', shortLabel: 'Điểm danh' },
-        { path: '/history', label: '📜 Lịch sử', icon: '📜', shortLabel: 'Lịch sử' }
+        { path: '/grades', label: '📝 Nhập điểm', icon: '📝', shortLabel: 'Nhập điểm' },
+        { path: '/history', label: '📜 Lịch sử', icon: '📜', shortLabel: 'Lịch sử' },
+        ...(isAdmin() ? [{ path: '/admin', label: '👥 Quản lý TK', icon: '👥', shortLabel: 'Admin' }] : [])
     ];
 
     // Filter out desktop-only items on mobile
@@ -108,6 +118,59 @@ export default function Navigation() {
                                 </Link>
                             );
                         })}
+
+                        {/* User Info & Logout */}
+                        {user && (
+                            <div style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 'var(--spacing-sm)',
+                                marginLeft: 'var(--spacing-md)',
+                                paddingLeft: 'var(--spacing-md)',
+                                borderLeft: '1px solid rgba(255, 255, 255, 0.3)'
+                            }}>
+                                <div style={{
+                                    color: 'white',
+                                    fontSize: 'var(--font-size-sm)',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 'var(--spacing-xs)'
+                                }}>
+                                    <span>{user.username}</span>
+                                    {isAdmin() && (
+                                        <span style={{
+                                            background: 'var(--color-warning)',
+                                            color: 'var(--color-gray-800)',
+                                            padding: '2px 6px',
+                                            borderRadius: 'var(--radius-sm)',
+                                            fontSize: 'var(--font-size-xs)',
+                                            fontWeight: '600'
+                                        }}>
+                                            ADMIN
+                                        </span>
+                                    )}
+                                </div>
+                                <button
+                                    onClick={handleLogout}
+                                    style={{
+                                        background: 'rgba(255, 255, 255, 0.2)',
+                                        color: 'white',
+                                        border: 'none',
+                                        padding: 'var(--spacing-xs) var(--spacing-md)',
+                                        borderRadius: 'var(--radius-md)',
+                                        cursor: 'pointer',
+                                        fontSize: 'var(--font-size-sm)',
+                                        fontWeight: '500',
+                                        transition: 'all var(--transition-fast)',
+                                        whiteSpace: 'nowrap'
+                                    }}
+                                    onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.3)'}
+                                    onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)'}
+                                >
+                                    🚪 Đăng xuất
+                                </button>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>

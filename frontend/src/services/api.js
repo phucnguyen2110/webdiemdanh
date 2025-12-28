@@ -8,7 +8,10 @@ const COLD_START_THRESHOLD = 15 * 60 * 1000; // 15 minutes
 const api = axios.create({
     baseURL: import.meta.env.VITE_API_URL || '/api',
     headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
     },
     timeout: 90000 // 90 seconds timeout for cold starts
 });
@@ -27,6 +30,20 @@ api.interceptors.request.use(
             startTime: Date.now(),
             isPotentiallyColdStart: isPotentiallyColdStart()
         };
+
+        // Add authentication headers from localStorage
+        const userStr = localStorage.getItem('user');
+        if (userStr) {
+            try {
+                const user = JSON.parse(userStr);
+                config.headers['x-user-id'] = user.id;
+                config.headers['x-user-role'] = user.role;
+                config.headers['x-assigned-classes'] = JSON.stringify(user.assignedClasses || []);
+            } catch (err) {
+                console.error('Failed to parse user from localStorage:', err);
+            }
+        }
+
         return config;
     },
     (error) => {
@@ -44,6 +61,12 @@ api.interceptors.response.use(
         const duration = Date.now() - response.config.metadata.startTime;
         if (duration > 5000) {
             console.log(`⏱️ Slow request detected: ${response.config.url} took ${duration}ms`);
+        }
+
+        // Handle 304 Not Modified - return cached data or empty object
+        if (response.status === 304) {
+            console.log('📦 Using cached data (304)');
+            return response.data || {};
         }
 
         return response.data;
@@ -182,6 +205,31 @@ export const exportAPI = {
 };
 
 /**
+ * Grades API
+ */
+export const gradesAPI = {
+    // Luu diem (M, 1T, Thi)
+    save: (data) => api.post('/grades', data),
+
+    // Lay lich su diem theo lop va hoc ky
+    getHistory: (classId, semester = null) => {
+        const params = { classId };
+        if (semester) params.semester = semester; // HK1 or HK2
+        return api.get('/grades/history', { params });
+    },
+
+    // Lay chi tiet diem cua mot lop
+    getByClass: (classId, semester = null) => {
+        const params = {};
+        if (semester) params.semester = semester;
+        return api.get(`/grades/class/${classId}`, { params });
+    },
+
+    // Xoa diem cua mot hoc sinh
+    deleteStudentGrade: (gradeId) => api.delete(`/grades/${gradeId}`)
+};
+
+/**
  * Students API
  */
 export const studentsAPI = {
@@ -190,6 +238,37 @@ export const studentsAPI = {
 
     // Get all QR codes for a class
     getClassQRCodes: (classId) => api.get(`/students/class/${classId}/qr-all`)
+};
+
+/**
+ * Auth API
+ */
+export const authAPI = {
+    // Login
+    login: (username, password) => api.post('/auth/login', { username, password }),
+
+    // Logout
+    logout: () => api.post('/auth/logout'),
+
+    // Get current user info (refresh user data)
+    getMe: () => api.get('/auth/me')
+};
+
+/**
+ * Users API (Admin only)
+ */
+export const usersAPI = {
+    // Get all users
+    getAll: () => api.get('/users'),
+
+    // Create user
+    create: (userData) => api.post('/users', userData),
+
+    // Update user
+    update: (userId, userData) => api.put(`/users/${userId}`, userData),
+
+    // Delete user
+    delete: (userId) => api.delete(`/users/${userId}`)
 };
 
 export default api;

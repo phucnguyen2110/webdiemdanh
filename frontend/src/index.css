@@ -313,6 +313,24 @@ p {
   color: var(--color-gray-300);
 }
 
+/* Force center alignment for number inputs */
+input[type="number"] {
+  text-align: center !important;
+}
+
+/* Remove number input spinners for cleaner look */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  appearance: none;
+  margin: 0;
+}
+
+input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
 /* Dropdown options styling */
 .form-select option {
   padding: var(--spacing-sm);

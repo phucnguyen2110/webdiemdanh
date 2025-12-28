@@ -1,10 +1,13 @@
 import { useState, useEffect } from 'react';
-import { classesAPI, exportAPI, studentsAPI, isPotentiallyColdStart } from '../services/api';
+import { classesAPI, exportAPI, studentsAPI, usersAPI } from '../services/api'; // Added usersAPI
+import { useAuth } from '../contexts/AuthContext'; // Added useAuth
 import qrIcon from '../assets/qr-icon.png';
 import SmartLoading from '../components/SmartLoading';
 
 export default function FilesPage() {
+    const { isAdmin, canAccessClass } = useAuth();
     const [classes, setClasses] = useState([]);
+    const [teacherMap, setTeacherMap] = useState({}); // Map classId -> teacherName
     const [expandedClassId, setExpandedClassId] = useState(null);
     const [students, setStudents] = useState({});
     const [loading, setLoading] = useState(true);
@@ -24,6 +27,34 @@ export default function FilesPage() {
         loadClasses();
     }, []);
 
+    // If Admin, load users to map teachers to classes (Fallback if backend doesn't return teacher_name)
+    useEffect(() => {
+        if (isAdmin()) {
+            loadTeachers();
+        }
+    }, [isAdmin()]);
+
+    const loadTeachers = async () => {
+        try {
+            const result = await usersAPI.getAll();
+            const users = result.users || [];
+            const map = {};
+
+            // Map classId to user.fullName
+            users.forEach(user => {
+                if (user.assignedClasses && Array.isArray(user.assignedClasses)) {
+                    user.assignedClasses.forEach(classId => {
+                        // Prefer fullName, fallback to username
+                        map[classId] = user.fullName || user.full_name || user.username;
+                    });
+                }
+            });
+            setTeacherMap(map);
+        } catch (err) {
+            console.error('Failed to load teachers map:', err);
+        }
+    };
+
     const loadClasses = async () => {
         try {
             setLoading(true);
@@ -34,7 +65,8 @@ export default function FilesPage() {
                 id: cls.id,
                 name: cls.name,
                 createdAt: cls.created_at,
-                studentsCount: cls.students_count
+                studentsCount: cls.students_count,
+                teacherName: cls.teacher_name || cls.teacherName // Get from API if available
             }));
             setClasses(transformedClasses);
         } catch (err) {
@@ -333,6 +365,11 @@ export default function FilesPage() {
                                         ) : (
                                             <h3 style={{ fontSize: 'var(--font-size-lg)', marginBottom: 'var(--spacing-xs)' }}>
                                                 {classItem.name}
+                                                {(classItem.teacherName || teacherMap[classItem.id]) && (
+                                                    <span>
+                                                        {' - '}{classItem.teacherName || teacherMap[classItem.id]}
+                                                    </span>
+                                                )}
                                             </h3>
                                         )}
                                         <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-gray-500)' }}>
@@ -377,46 +414,48 @@ export default function FilesPage() {
                                                 </button>
                                             </>
                                         ) : (
-                                            <>
-                                                <button
-                                                    className="btn btn-sm"
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        handleStartEdit(classItem.id, classItem.name);
-                                                    }}
-                                                    style={{ background: 'var(--color-primary)', color: 'white' }}
-                                                >
-                                                    ✏️<span className="mobile-hide"> Sửa</span>
-                                                </button>
-                                                <button
-                                                    className="btn btn-danger btn-sm"
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        handleDelete(classItem.id, classItem.name);
-                                                    }}
-                                                    disabled={deleteLoading === classItem.id}
-                                                >
-                                                    {deleteLoading === classItem.id ? (
-                                                        <span className="spinner" style={{ width: '0.75rem', height: '0.75rem', borderWidth: '2px' }}></span>
-                                                    ) : (
-                                                        <>🗑️<span className="mobile-hide"> Xóa</span></>
-                                                    )}
-                                                </button>
-                                                <button
-                                                    className="btn btn-success btn-sm"
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        handleExportExcel(classItem.id, classItem.name);
-                                                    }}
-                                                    disabled={exportLoading === classItem.id}
-                                                >
-                                                    {exportLoading === classItem.id ? (
-                                                        <span className="spinner" style={{ width: '0.75rem', height: '0.75rem', borderWidth: '2px' }}></span>
-                                                    ) : (
-                                                        <>📥<span className="mobile-hide"> Tải file Excel</span></>
-                                                    )}
-                                                </button>
-                                            </>
+                                            canAccessClass(classItem.id) && (
+                                                <>
+                                                    <button
+                                                        className="btn btn-sm"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleStartEdit(classItem.id, classItem.name);
+                                                        }}
+                                                        style={{ background: 'var(--color-primary)', color: 'white' }}
+                                                    >
+                                                        ✏️<span className="mobile-hide"> Sửa</span>
+                                                    </button>
+                                                    <button
+                                                        className="btn btn-danger btn-sm"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleDelete(classItem.id, classItem.name);
+                                                        }}
+                                                        disabled={deleteLoading === classItem.id}
+                                                    >
+                                                        {deleteLoading === classItem.id ? (
+                                                            <span className="spinner" style={{ width: '0.75rem', height: '0.75rem', borderWidth: '2px' }}></span>
+                                                        ) : (
+                                                            <>🗑️<span className="mobile-hide"> Xóa</span></>
+                                                        )}
+                                                    </button>
+                                                    <button
+                                                        className="btn btn-success btn-sm"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleExportExcel(classItem.id, classItem.name);
+                                                        }}
+                                                        disabled={exportLoading === classItem.id}
+                                                    >
+                                                        {exportLoading === classItem.id ? (
+                                                            <span className="spinner" style={{ width: '0.75rem', height: '0.75rem', borderWidth: '2px' }}></span>
+                                                        ) : (
+                                                            <>📥<span className="mobile-hide"> Tải file Excel</span></>
+                                                        )}
+                                                    </button>
+                                                </>
+                                            )
                                         )}
 
                                         {/* Expand arrow */}

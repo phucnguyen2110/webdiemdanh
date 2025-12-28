@@ -1,9 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
+import { useAuth } from '../contexts/AuthContext';
 import { Html5Qrcode } from 'html5-qrcode';
 import { classesAPI, attendanceAPI } from '../services/api';
 import { invalidateCache } from '../utils/excelCache';
 
 export default function QRScannerPage() {
+    const { canAccessClass } = useAuth();
     const [classes, setClasses] = useState([]);
     const [selectedClassId, setSelectedClassId] = useState('');
     const [attendanceDate, setAttendanceDate] = useState(
@@ -288,7 +290,7 @@ export default function QRScannerPage() {
                                 onChange={(e) => setSelectedClassId(e.target.value)}
                             >
                                 <option value="">-- Chọn lớp --</option>
-                                {classes.map(c => (
+                                {classes.filter(c => canAccessClass(c.id)).map(c => (
                                     <option key={c.id} value={c.id}>{c.name}</option>
                                 ))}
                             </select>
@@ -339,30 +341,7 @@ export default function QRScannerPage() {
                             📷 Bắt Đầu Quét QR
                         </button>
 
-                        <div style={{
-                            margin: 'var(--spacing-md) 0',
-                            textAlign: 'center',
-                            color: 'var(--color-gray-500)',
-                            fontSize: 'var(--font-size-sm)'
-                        }}>
-                            hoặc
-                        </div>
 
-                        <label
-                            htmlFor="qr-file-upload"
-                            className="btn btn-secondary"
-                            style={{ width: '100%', display: 'block', textAlign: 'center', cursor: 'pointer' }}
-                        >
-                            📁 Chọn Ảnh QR Từ Thư Viện
-                        </label>
-                        <input
-                            id="qr-file-upload"
-                            type="file"
-                            accept="image/*"
-                            onChange={handleFileUpload}
-                            style={{ display: 'none' }}
-                        />
-                        <div id="qr-reader-file" style={{ display: 'none' }}></div>
                     </form>
                 ) : (
                     <div style={{ padding: 'var(--spacing-lg)' }}>

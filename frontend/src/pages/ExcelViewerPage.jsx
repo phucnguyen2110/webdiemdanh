@@ -1,9 +1,13 @@
 import { useState, useEffect } from 'react';
-import { classesAPI } from '../services/api';
+import { classesAPI, gradesAPI } from '../services/api';
 import { getCachedExcel, setCachedExcel } from '../utils/excelCache';
 import { mergeAttendanceIntoExcel, getAttendanceStats, isPresent, getAttendanceCellColor } from '../utils/excelMerger';
+import { mergeGradesIntoExcel, getGradeStats } from '../utils/gradesMerger';
+import { useAuth } from '../contexts/AuthContext';
+import { filterClassesByPermission } from '../utils/classFilter';
 
 export default function ExcelViewerPage() {
+    const { user } = useAuth();
     const [classes, setClasses] = useState([]);
     const [selectedClassId, setSelectedClassId] = useState('');
     const [sheets, setSheets] = useState([]);
@@ -15,6 +19,7 @@ export default function ExcelViewerPage() {
     const [isFromCache, setIsFromCache] = useState(false);
     const [lastUpdated, setLastUpdated] = useState(null);
     const [attendanceStats, setAttendanceStats] = useState(null);
+    const [gradeStats, setGradeStats] = useState(null);
 
     // Load all classes on mount
     useEffect(() => {
@@ -46,7 +51,10 @@ export default function ExcelViewerPage() {
                 createdAt: cls.created_at,
                 studentsCount: cls.students_count
             }));
-            setClasses(transformedClasses);
+
+            // Filter classes by user permission
+            const filteredClasses = filterClassesByPermission(transformedClasses, user, false);
+            setClasses(filteredClasses);
         } catch (err) {
             setError(err.message);
         }
@@ -59,6 +67,7 @@ export default function ExcelViewerPage() {
             setClassName('');
             setIsFromCache(false);
             setLastUpdated(null);
+            setGradeStats(null);
             return;
         }
 
@@ -70,66 +79,130 @@ export default function ExcelViewerPage() {
         setIsFromCache(false);
 
         try {
-            // Step 1: Check cache first
             const cached = getCachedExcel(classId);
 
             if (cached) {
-                console.log('📦 Found cached data, validating timestamp...');
 
                 // Step 2: Fetch to check timestamp (lightweight - backend optimized)
                 const result = await classesAPI.getExcelSheets(classId);
 
                 // Step 3: Compare timestamps
                 if (cached.timestamp === result.lastUpdated) {
-                    console.log('✅ Cache valid! Using cached data');
 
-                    // Use cached merged data (already merged when saved)
-                    setSheets(cached.data.sheets || []);
+                    // Use cached Excel sheets
+                    let cachedSheets = cached.data.sheets || [];
+
+                    // BUT always fetch fresh grades data (grades change frequently)
+                    let gradesData = [];
+                    try {
+                        const [gradesHK1, gradesHK2] = await Promise.all([
+                            gradesAPI.getByClass(classId, 'HK1').catch(err => {
+                                console.warn('⚠️ Could not fetch HK1 grades:', err.message);
+                                return { grades: [] };
+                            }),
+                            gradesAPI.getByClass(classId, 'HK2').catch(err => {
+                                console.warn('⚠️ Could not fetch HK2 grades:', err.message);
+                                return { grades: [] };
+                            })
+                        ]);
+
+                        gradesData = [
+                            ...(gradesHK1.grades || []),
+                            ...(gradesHK2.grades || [])
+                        ];
+                    } catch (gradeErr) {
+                        console.warn('⚠️ Could not fetch grades:', gradeErr.message);
+                    }
+
+                    // Merge fresh grades into cached sheets
+                    if (gradesData.length > 0) {
+                        cachedSheets = mergeGradesIntoExcel(cachedSheets, gradesData);
+                    }
+
+                    setSheets(cachedSheets);
                     setClassName(cached.data.className || '');
                     setLastUpdated(cached.timestamp);
                     setIsFromCache(true);
 
-                    // Use cached stats if available
+                    // Use cached attendance stats
                     if (cached.data.attendanceStats) {
                         setAttendanceStats(cached.data.attendanceStats);
+                    }
+
+                    // Calculate fresh grade stats
+                    if (gradesData.length > 0) {
+                        const gradeStatsData = getGradeStats(gradesData);
+                        setGradeStats(gradeStatsData);
                     }
 
                     setLoading(false);
                     return;
                 } else {
-                    console.log('⚠️ Cache outdated (timestamp changed), fetching fresh data');
                 }
             }
 
-            // Step 4: Cache miss or invalid - fetch full data
-            console.log('📥 Fetching fresh Excel data from server');
             const result = await classesAPI.getExcelSheets(classId);
 
+            // Fetch grades data for all semesters
+            let gradesData = [];
+            try {
+                // Fetch both HK1 and HK2 separately to ensure we get all data
+                const [gradesHK1, gradesHK2] = await Promise.all([
+                    gradesAPI.getByClass(classId, 'HK1').catch(err => {
+                        console.warn('⚠️ Could not fetch HK1 grades:', err.message);
+                        return { grades: [] };
+                    }),
+                    gradesAPI.getByClass(classId, 'HK2').catch(err => {
+                        console.warn('⚠️ Could not fetch HK2 grades:', err.message);
+                        return { grades: [] };
+                    })
+                ]);
+
+                gradesData = [
+                    ...(gradesHK1.grades || []),
+                    ...(gradesHK2.grades || [])
+                ];
+            } catch (gradeErr) {
+                console.warn('⚠️ Could not fetch grades:', gradeErr.message);
+            }
+
             // Merge attendance data into sheets
-            const mergedSheets = result.attendanceData
+            let mergedSheets = result.attendanceData
                 ? mergeAttendanceIntoExcel(result.sheets || [], result.attendanceData)
                 : result.sheets || [];
+
+            // Merge grades data into sheets
+            if (gradesData.length > 0) {
+                mergedSheets = mergeGradesIntoExcel(mergedSheets, gradesData);
+            }
 
             setSheets(mergedSheets);
             setClassName(result.className || '');
             setLastUpdated(result.lastUpdated);
 
-            // Calculate stats
-            let stats = null;
+            // Calculate attendance stats
+            let attendStats = null;
             if (result.attendanceData) {
-                stats = getAttendanceStats(result.attendanceData);
-                setAttendanceStats(stats);
+                attendStats = getAttendanceStats(result.attendanceData);
+                setAttendanceStats(attendStats);
+            }
+
+            // Calculate grade stats
+            let gradeStatsData = null;
+            if (gradesData.length > 0) {
+                gradeStatsData = getGradeStats(gradesData);
+                setGradeStats(gradeStatsData);
             }
 
             // Step 5: Save to cache (with merged data and stats)
             if (result.lastUpdated) {
                 const dataToCache = {
                     ...result,
-                    sheets: mergedSheets,  // Save merged sheets
-                    attendanceStats: stats  // Save calculated stats
+                    sheets: mergedSheets,  // Save merged sheets (with attendance + grades)
+                    attendanceStats: attendStats,  // Save calculated stats
+                    gradeStats: gradeStatsData  // Save grade stats
                 };
                 setCachedExcel(classId, dataToCache, result.lastUpdated);
-                console.log('💾 Data cached for future use (with merged attendance)');
             }
 
         } catch (err) {
@@ -194,6 +267,20 @@ export default function ExcelViewerPage() {
             );
         }
 
+        // Find STT column by searching through all rows
+        let sttColumnIndex = -1;
+        for (let rowIndex = 0; rowIndex < sheetData.length; rowIndex++) {
+            const row = sheetData[rowIndex];
+            const colIndex = row.findIndex(cell => {
+                const cellValue = formatCellValue(cell);
+                return cellValue && cellValue.toString().trim().toUpperCase() === 'STT';
+            });
+            if (colIndex !== -1) {
+                sttColumnIndex = colIndex;
+                break; // Found STT, stop searching
+            }
+        }
+
         return (
             <div style={{
                 overflowX: 'auto',
@@ -215,6 +302,8 @@ export default function ExcelViewerPage() {
                                 {row.map((cell, cellIndex) => {
                                     const cellValue = formatCellValue(cell);
                                     const isAttendanceMark = isPresent(cellValue);
+                                    // Don't highlight if this is the STT column
+                                    const isSttColumn = cellIndex === sttColumnIndex;
 
                                     return (
                                         <td
@@ -224,11 +313,11 @@ export default function ExcelViewerPage() {
                                                 border: '1px solid var(--color-gray-200)',
                                                 whiteSpace: rowIndex === 0 ? 'pre-line' : 'nowrap',
                                                 minWidth: '100px',
-                                                background: isAttendanceMark && rowIndex > 0
+                                                background: isAttendanceMark && rowIndex > 0 && !isSttColumn
                                                     ? getAttendanceCellColor(cellValue)
                                                     : 'inherit',
-                                                color: isAttendanceMark ? '#28a745' : 'inherit',
-                                                fontWeight: isAttendanceMark ? '700' : (rowIndex === 0 ? '600' : '400'),
+                                                color: isAttendanceMark && !isSttColumn ? '#28a745' : 'inherit',
+                                                fontWeight: isAttendanceMark && !isSttColumn ? '700' : (rowIndex === 0 ? '600' : '400'),
                                                 textAlign: 'left'
                                             }}
                                         >

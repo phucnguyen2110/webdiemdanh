@@ -2,9 +2,12 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { classesAPI, attendanceAPI } from '../services/api';
 import { invalidateCache } from '../utils/excelCache';
+import { useAuth } from '../contexts/AuthContext';
+import { filterClassesByPermission } from '../utils/classFilter';
 
 export default function AttendancePage() {
     const navigate = useNavigate();
+    const { user } = useAuth();
     const [classes, setClasses] = useState([]);
     const [selectedClassId, setSelectedClassId] = useState('');
     const [students, setStudents] = useState([]);
@@ -50,7 +53,10 @@ export default function AttendancePage() {
                 createdAt: cls.created_at,
                 studentsCount: cls.students_count
             }));
-            setClasses(transformedClasses);
+
+            // Filter classes by user permission
+            const filteredClasses = filterClassesByPermission(transformedClasses, user, false);
+            setClasses(filteredClasses);
         } catch (err) {
             setError('Không thể tải danh sách lớp: ' + err.message);
         }
