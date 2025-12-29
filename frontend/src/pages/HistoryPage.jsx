@@ -129,6 +129,32 @@ export default function HistoryPage() {
         }
     };
 
+    const handleDeleteStudentAttendance = async (sessionId, studentId, studentName, event) => {
+        event.stopPropagation();
+
+        if (!window.confirm(`Bạn có chắc chắn muốn xóa điểm danh của em "${studentName}"?`)) {
+            return;
+        }
+
+        try {
+            await attendanceAPI.deleteStudentAttendance(sessionId, studentId);
+
+            // Cập nhật UI local: Chuyển trạng thái sang Vắng (isPresent = false) thay vì xóa khỏi list
+            setSessionDetails(prev => ({
+                ...prev,
+                records: prev.records.map(r =>
+                    r.studentId === studentId ? { ...r, isPresent: false } : r
+                )
+            }));
+
+            // Reload count ở list bên ngoài
+            loadHistory(selectedClassId);
+
+        } catch (err) {
+            alert('Lỗi xóa điểm danh: ' + err.message);
+        }
+    };
+
     const handleExport = async () => {
         if (!selectedClassId) {
             setError('Vui lòng chọn lớp');
@@ -438,18 +464,34 @@ export default function HistoryPage() {
                                                             background: record.isPresent ? 'var(--color-success-light)' : 'transparent',
                                                             display: 'flex',
                                                             alignItems: 'center',
+                                                            justifyContent: 'space-between',
                                                             gap: 'var(--spacing-md)'
                                                         }}
                                                     >
-                                                        <span style={{
-                                                            fontSize: 'var(--font-size-xl)',
-                                                            width: '1.5rem'
-                                                        }}>
-                                                            {record.isPresent ? '✅' : '❌'}
-                                                        </span>
-                                                        <span>
-                                                            <strong>{record.stt}.</strong> {record.baptismalName ? `${record.baptismalName} ` : ''}{record.fullName}
-                                                        </span>
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-md)' }}>
+                                                            <span style={{
+                                                                fontSize: 'var(--font-size-xl)',
+                                                                width: '1.5rem'
+                                                            }}>
+                                                                {record.isPresent ? '✅' : '❌'}
+                                                            </span>
+                                                            <span>
+                                                                <strong>{record.stt}.</strong> {record.baptismalName ? `${record.baptismalName} ` : ''}{record.fullName}
+                                                            </span>
+                                                        </div>
+                                                        {record.isPresent && (
+                                                            <button
+                                                                onClick={(e) => handleDeleteStudentAttendance(sessionDetails.session.id, record.studentId, record.fullName, e)}
+                                                                className="btn btn-sm btn-danger"
+                                                                style={{
+                                                                    padding: '0.25rem 0.5rem',
+                                                                    fontSize: '0.8rem'
+                                                                }}
+                                                                title="Xóa lượt điểm danh này"
+                                                            >
+                                                                🗑️ Xóa
+                                                            </button>
+                                                        )}
                                                     </div>
                                                 ))}
                                             </div>
