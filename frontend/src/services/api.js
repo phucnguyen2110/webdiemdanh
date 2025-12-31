@@ -1,4 +1,6 @@
 import axios from 'axios';
+import { savePendingAttendance, cacheClasses, cacheStudents, cacheHistory, getCachedClasses, getCachedStudents, getCachedHistory } from '../utils/offlineStorage';
+import networkDetector from '../utils/networkDetector';
 
 // Track last request time for cold start detection
 let lastRequestTime = Date.now();
@@ -78,7 +80,7 @@ api.interceptors.response.use(
 );
 
 /**
- * Classes API
+ * Classes API with Offline Support
  */
 export const classesAPI = {
     // Upload file Excel và tạo lớp
@@ -94,11 +96,49 @@ export const classesAPI = {
         });
     },
 
-    // Lấy danh sách lớp
-    getAll: () => api.get('/classes'),
+    // Lấy danh sách lớp (with caching)
+    getAll: async () => {
+        try {
+            const result = await api.get('/classes');
+            // Cache the classes
+            if (result.classes) {
+                await cacheClasses(result.classes);
+            }
+            return result;
+        } catch (error) {
+            // If offline, try to get from cache
+            if (!networkDetector.getStatus()) {
+                console.log('📴 Offline: Loading classes from cache');
+                const cached = await getCachedClasses();
+                if (cached && cached.length > 0) {
+                    return { classes: cached, fromCache: true };
+                }
+            }
+            throw error;
+        }
+    },
 
-    // Lấy danh sách thiếu nhi trong lớp
-    getStudents: (classId) => api.get(`/classes/${classId}/students`),
+    // Lấy danh sách thiếu nhi trong lớp (with caching)
+    getStudents: async (classId) => {
+        try {
+            const result = await api.get(`/classes/${classId}/students`);
+            // Cache the students
+            if (result.students) {
+                await cacheStudents(classId, result.students);
+            }
+            return result;
+        } catch (error) {
+            // If offline, try to get from cache
+            if (!networkDetector.getStatus()) {
+                console.log('📴 Offline: Loading students from cache');
+                const cached = await getCachedStudents(classId);
+                if (cached) {
+                    return { students: cached, fromCache: true };
+                }
+            }
+            throw error;
+        }
+    },
 
     // Lấy tất cả sheets từ file Excel
     getExcelSheets: (classId) => api.get(`/classes/${classId}/excel`),
@@ -111,18 +151,55 @@ export const classesAPI = {
 };
 
 /**
- * Attendance API
+ * Attendance API with Offline Support
  */
 export const attendanceAPI = {
-    // Lưu điểm danh
-    save: (data) => api.post('/attendance', data),
+    // Lưu điểm danh (with offline support)
+    save: async (data) => {
+        try {
+            // Try to save online first
+            const result = await api.post('/attendance', data);
+            return result;
+        } catch (error) {
+            // If offline or network error, save to IndexedDB
+            if (!networkDetector.getStatus() || error.message.includes('Network')) {
+                console.log('📴 Offline: Saving attendance to local storage');
+                await savePendingAttendance(data);
 
-    // Lấy lịch sử điểm danh
-    getHistory: (classId, startDate = null, endDate = null) => {
+                // Return success response for UI
+                return {
+                    success: true,
+                    offline: true,
+                    message: 'Điểm danh đã được lưu offline. Sẽ tự động đồng bộ khi có mạng.'
+                };
+            }
+            // Re-throw other errors
+            throw error;
+        }
+    },
+
+    // Lấy lịch sử điểm danh (with caching)
+    getHistory: async (classId, startDate = null, endDate = null) => {
         const params = { classId };
         if (startDate) params.startDate = startDate;
         if (endDate) params.endDate = endDate;
-        return api.get('/attendance/history', { params });
+
+        try {
+            const result = await api.get('/attendance/history', { params });
+            // Cache the result
+            await cacheHistory(classId, result);
+            return result;
+        } catch (error) {
+            // If offline, try to get from cache
+            if (!networkDetector.getStatus()) {
+                console.log('📴 Offline: Loading history from cache');
+                const cached = await getCachedHistory(classId);
+                if (cached) {
+                    return { ...cached, fromCache: true };
+                }
+            }
+            throw error;
+        }
     },
 
     // Lấy chi tiết buổi điểm danh
@@ -272,6 +349,23 @@ export const usersAPI = {
 
     // Delete user
     delete: (userId) => api.delete(`/users/${userId}`)
+};
+
+/**
+ * Sync Errors API
+ */
+export const syncErrorsAPI = {
+    // Get resolved attendance IDs for current user
+    getMyResolvedAttendanceIds: async (since = null) => {
+        try {
+            const params = since ? { since } : {};
+            const response = await api.get('/sync-errors/my-resolved', { params });
+            return response.data?.resolvedAttendanceIds || [];
+        } catch (error) {
+            console.error('Failed to get resolved attendance IDs:', error);
+            return [];
+        }
+    }
 };
 
 export default api;

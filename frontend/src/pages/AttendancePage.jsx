@@ -4,6 +4,7 @@ import { classesAPI, attendanceAPI } from '../services/api';
 import { invalidateCache } from '../utils/excelCache';
 import { useAuth } from '../contexts/AuthContext';
 import { filterClassesByPermission } from '../utils/classFilter';
+import { validateAttendance, getValidationHint, getAllowedAttendanceTypes } from '../utils/attendanceValidation';
 
 export default function AttendancePage() {
     const navigate = useNavigate();
@@ -26,6 +27,15 @@ export default function AttendancePage() {
     useEffect(() => {
         loadClasses();
     }, []);
+
+    // Auto-select valid attendance type when date changes
+    useEffect(() => {
+        const allowedTypes = getAllowedAttendanceTypes(attendanceDate);
+        if (allowedTypes.length > 0 && !allowedTypes.includes(attendanceType)) {
+            // Current type is not allowed, select first allowed type
+            setAttendanceType(allowedTypes[0]);
+        }
+    }, [attendanceDate]);
 
     // Clear messages when date or attendance type changes
     useEffect(() => {
@@ -57,8 +67,16 @@ export default function AttendancePage() {
             // Filter classes by user permission
             const filteredClasses = filterClassesByPermission(transformedClasses, user, false);
             setClasses(filteredClasses);
+
+            // Clear any previous errors
+            setError('');
         } catch (err) {
-            setError('Không thể tải danh sách lớp: ' + err.message);
+            // Check if this is an offline error with no cache
+            if (err.message.includes('Đã xảy ra lỗi') || err.message.includes('Network')) {
+                setError('📴 Chế độ Offline: Chưa có dữ liệu lớp học được lưu. Vui lòng kết nối mạng ít nhất 1 lần để tải danh sách lớp.');
+            } else {
+                setError('Không thể tải danh sách lớp: ' + err.message);
+            }
         }
     };
 
@@ -76,7 +94,12 @@ export default function AttendancePage() {
             });
             setCheckedStudents(initialChecked);
         } catch (err) {
-            setError('Không thể tải danh sách thiếu nhi: ' + err.message);
+            // Check if this is an offline error with no cache
+            if (err.message.includes('Đã xảy ra lỗi') || err.message.includes('Network')) {
+                setError('📴 Chế độ Offline: Chưa có dữ liệu thiếu nhi được lưu cho lớp này. Vui lòng kết nối mạng ít nhất 1 lần để tải danh sách.');
+            } else {
+                setError('Không thể tải danh sách thiếu nhi: ' + err.message);
+            }
         } finally {
             setLoadingStudents(false);
         }
@@ -128,6 +151,13 @@ export default function AttendancePage() {
             return;
         }
 
+        // Validate date and attendance type
+        const validation = validateAttendance(attendanceDate, attendanceType);
+        if (!validation.valid) {
+            setError(validation.error);
+            return;
+        }
+
         setLoading(true);
         setError('');
         setSuccess('');
@@ -149,25 +179,30 @@ export default function AttendancePage() {
                 attendanceMethod: 'manual'
             });
 
-            // Check Excel write results
-            if (response.excelWriteResults && response.excelWriteResults.length > 0) {
-                const successCount = response.excelWriteResults.filter(r => r.success).length;
-                const failCount = response.excelWriteResults.length - successCount;
-
-                if (failCount === 0) {
-                    // All success
-                    setSuccess(`✅ Đã lưu điểm danh thành công! (${presentCount}/${students.length} thiếu nhi có mặt)\n📊 Đã ghi vào Excel thành công!`);
-                } else if (successCount === 0) {
-                    // All failed - show only error, not success
-                    const formattedDate = formatVietnameseDate(attendanceDate);
-                    setError(`❌ Không thể điểm danh thành công do trong file Excel của lớp không có cột điểm danh ${formattedDate} - ${attendanceType}`);
-                } else {
-                    // Partial success
-                    setSuccess(`✅ Đã lưu điểm danh thành công! (${presentCount}/${students.length} thiếu nhi có mặt)\n⚠️ Excel: ${successCount}/${response.excelWriteResults.length} thiếu nhi được ghi thành công.`);
-                }
+            // Check if this was saved offline
+            if (response.offline) {
+                setSuccess(`📴 Đã lưu điểm danh OFFLINE! (${presentCount}/${students.length} thiếu nhi có mặt)\n\n🔄 Dữ liệu sẽ tự động đồng bộ lên hệ thống khi có mạng.\n\n💡 Bạn có thể tiếp tục điểm danh offline, tất cả sẽ được sync sau.`);
             } else {
-                // No Excel file or no write attempted
-                setSuccess(`✅ Đã lưu điểm danh thành công! (${presentCount}/${students.length} thiếu nhi có mặt)`);
+                // Online save - check Excel write results
+                if (response.excelWriteResults && response.excelWriteResults.length > 0) {
+                    const successCount = response.excelWriteResults.filter(r => r.success).length;
+                    const failCount = response.excelWriteResults.length - successCount;
+
+                    if (failCount === 0) {
+                        // All success
+                        setSuccess(`✅ Đã lưu điểm danh thành công! (${presentCount}/${students.length} thiếu nhi có mặt)\n📊 Đã ghi vào Excel thành công!`);
+                    } else if (successCount === 0) {
+                        // All failed - show only error, not success
+                        const formattedDate = formatVietnameseDate(attendanceDate);
+                        setError(`❌ Không thể điểm danh thành công do trong file Excel của lớp không có cột điểm danh ${formattedDate} - ${attendanceType}`);
+                    } else {
+                        // Partial success
+                        setSuccess(`✅ Đã lưu điểm danh thành công! (${presentCount}/${students.length} thiếu nhi có mặt)\n⚠️ Excel: ${successCount}/${response.excelWriteResults.length} thiếu nhi được ghi thành công.`);
+                    }
+                } else {
+                    // No Excel file or no write attempted
+                    setSuccess(`✅ Đã lưu điểm danh thành công! (${presentCount}/${students.length} thiếu nhi có mặt)`);
+                }
             }
 
             // Reset checked state only if not error
@@ -175,9 +210,11 @@ export default function AttendancePage() {
                 handleUncheckAll();
             }
 
-            // Invalidate Excel cache for this class
-            invalidateCache(selectedClassId);
-            console.log('💾 Excel cache invalidated for class', selectedClassId);
+            // Invalidate Excel cache for this class (only if online)
+            if (!response.offline) {
+                invalidateCache(selectedClassId);
+                console.log('💾 Excel cache invalidated for class', selectedClassId);
+            }
 
         } catch (err) {
             setError(err.message);
@@ -249,14 +286,24 @@ export default function AttendancePage() {
                                 disabled={loading}
                             />
                             {attendanceDate && (
-                                <p style={{
-                                    fontSize: 'var(--font-size-sm)',
-                                    color: 'var(--color-primary)',
-                                    marginTop: 'var(--spacing-xs)',
-                                    fontWeight: '500'
-                                }}>
-                                    📅 {formatVietnameseDate(attendanceDate)}
-                                </p>
+                                <>
+                                    <p style={{
+                                        fontSize: 'var(--font-size-sm)',
+                                        color: 'var(--color-primary)',
+                                        marginTop: 'var(--spacing-xs)',
+                                        fontWeight: '500'
+                                    }}>
+                                        📅 {formatVietnameseDate(attendanceDate)}
+                                    </p>
+                                    <p style={{
+                                        fontSize: 'var(--font-size-xs)',
+                                        color: getAllowedAttendanceTypes(attendanceDate).length === 0 ? 'var(--color-danger)' : 'var(--color-success)',
+                                        marginTop: 'var(--spacing-xs)',
+                                        fontWeight: '600'
+                                    }}>
+                                        {getValidationHint(attendanceDate)}
+                                    </p>
+                                </>
                             )}
                         </div>
 
@@ -269,11 +316,14 @@ export default function AttendancePage() {
                                 className="form-select"
                                 value={attendanceType}
                                 onChange={(e) => setAttendanceType(e.target.value)}
-                                disabled={loading}
+                                disabled={loading || getAllowedAttendanceTypes(attendanceDate).length === 0}
                             >
-                                <option value="Học Giáo Lý">Học Giáo Lý</option>
-                                <option value="Lễ Thứ 5">Lễ Thứ 5</option>
-                                <option value="Lễ Chúa Nhật">Lễ Chúa Nhật</option>
+                                {getAllowedAttendanceTypes(attendanceDate).map(type => (
+                                    <option key={type} value={type}>{type}</option>
+                                ))}
+                                {getAllowedAttendanceTypes(attendanceDate).length === 0 && (
+                                    <option value="">-- Ngày không hợp lệ --</option>
+                                )}
                             </select>
                         </div>
                     </div>

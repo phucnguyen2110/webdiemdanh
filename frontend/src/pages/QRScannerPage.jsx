@@ -3,6 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { Html5Qrcode } from 'html5-qrcode';
 import { classesAPI, attendanceAPI } from '../services/api';
 import { invalidateCache } from '../utils/excelCache';
+import { validateAttendance, getValidationHint, getAllowedAttendanceTypes } from '../utils/attendanceValidation';
 
 export default function QRScannerPage() {
     const { canAccessClass } = useAuth();
@@ -25,6 +26,15 @@ export default function QRScannerPage() {
         loadClasses();
     }, []);
 
+    // Auto-select valid attendance type when date changes
+    useEffect(() => {
+        const allowedTypes = getAllowedAttendanceTypes(attendanceDate);
+        if (allowedTypes.length > 0 && !allowedTypes.includes(attendanceType)) {
+            // Current type is not allowed, select first allowed type
+            setAttendanceType(allowedTypes[0]);
+        }
+    }, [attendanceDate]);
+
     // Clear messages when form fields change
     useEffect(() => {
         setError('');
@@ -41,12 +51,15 @@ export default function QRScannerPage() {
     };
 
     const startScanning = async () => {
-        if ({ selectedClassId }.selectedClassId === '') { // Fix variable access if needed, but assuming closure scope
-            // Note: selectedClassId is available in closure
-        }
-
         if (!selectedClassId) {
             setError('Vui lòng chọn lớp');
+            return;
+        }
+
+        // Validate date and attendance type
+        const validation = validateAttendance(attendanceDate, attendanceType);
+        if (!validation.valid) {
+            setError(validation.error);
             return;
         }
 
@@ -58,7 +71,45 @@ export default function QRScannerPage() {
 
     const stopScanning = async () => {
         setScanning(false);
+        setSuccess(''); // Clear previous scan messages
         processingStudents.current.clear(); // Clear processing set when stopping
+
+        // Save all scanned students at once
+        if (scannedStudents.length > 0) {
+            try {
+                const saveResponse = await attendanceAPI.save({
+                    classId: parseInt(selectedClassId),
+                    attendanceDate,
+                    attendanceType: convertAttendanceType(attendanceType),
+                    records: Array.from(
+                        new Map(
+                            scannedStudents.map(s => [s.studentId, {
+                                studentId: s.studentId,
+                                isPresent: true
+                            }])
+                        ).values()
+                    ),
+                    attendanceMethod: 'qr'
+                });
+
+                // Check Excel write results
+                if (saveResponse.excelWriteResults && saveResponse.excelWriteResults.length > 0) {
+                    const successCount = saveResponse.excelWriteResults.filter(r => r.success).length;
+
+                    if (successCount === 0) {
+                        // Excel write failed - show error
+                        const formattedDate = formatVietnameseDate(attendanceDate);
+                        setError(`❌ Không thể điểm danh thành công do trong file Excel của lớp không có cột điểm danh ${formattedDate} - ${attendanceType}`);
+                    } else {
+                        setSuccess(`✅ Đã lưu điểm danh cho ${scannedStudents.length} thiếu nhi`);
+                        // Invalidate Excel cache for this class
+                        invalidateCache(selectedClassId);
+                    }
+                }
+            } catch (err) {
+                setError(`Lỗi khi lưu điểm danh: ${err.message}`);
+            }
+        }
         // Cleanup will happen in useEffect
     };
 
@@ -192,20 +243,25 @@ export default function QRScannerPage() {
         return mapping[type] || type;
     };
 
+    const scannedStudentsRef = useRef([]);
+
+    // Keep ref in sync with state
+    useEffect(() => {
+        scannedStudentsRef.current = scannedStudents;
+    }, [scannedStudents]);
+
     const onScanSuccess = async (decodedText) => {
         try {
             const studentData = JSON.parse(decodedText);
 
             // Check if this student is already being processed
             if (processingStudents.current.has(studentData.studentId)) {
-                console.log('Student already being processed, skipping...');
                 return;
             }
 
-            // Check if already scanned (in final list)
-            if (scannedStudents.find(s => s.studentId === studentData.studentId)) {
-                setError(''); // Clear any previous error
-                setSuccess(`✅ ${studentData.studentName} đã được điểm danh rồi`);
+            // Check if already scanned (using Ref for up-to-date list)
+            if (scannedStudentsRef.current.find(s => s.studentId === studentData.studentId)) {
+                // Already scanned, just ignore silently to avoid message spam
                 return;
             }
 
@@ -223,38 +279,14 @@ export default function QRScannerPage() {
                     return;
                 }
 
-                // Save attendance
-                const saveResponse = await attendanceAPI.save({
-                    classId: parseInt(selectedClassId),
-                    attendanceDate,
-                    attendanceType: convertAttendanceType(attendanceType),
-                    records: [{
-                        studentId: studentData.studentId,
-                        isPresent: true
-                    }],
-                    attendanceMethod: 'qr'
-                });
+                // Add to scanned list (don't save yet - will save all when stopping)
+                setScannedStudents(prev => [...prev, {
+                    ...studentData,
+                    scannedAt: new Date().toLocaleTimeString('vi-VN')
+                }]);
 
-                // Check Excel write results
-                if (saveResponse.excelWriteResults && saveResponse.excelWriteResults.length > 0) {
-                    const successCount = saveResponse.excelWriteResults.filter(r => r.success).length;
-
-                    if (successCount === 0) {
-                        // Excel write failed - show error
-                        const formattedDate = formatVietnameseDate(attendanceDate);
-                        setError(`❌ Không thể điểm danh thành công do trong file Excel của lớp không có cột điểm danh ${formattedDate} - ${attendanceType}`);
-                        return;
-                    }
-                }
-
-                setScannedStudents(prev => [...prev, studentData]);
-                const formattedDate = formatVietnameseDate(attendanceDate);
                 setError(''); // Clear any previous error
-                setSuccess(`✅ ${formattedDate}\n - Đã điểm danh thành công: ${studentData.studentName}`);
-
-                // Invalidate Excel cache for this class
-                invalidateCache(selectedClassId);
-                console.log('💾 Excel cache invalidated for class', selectedClassId);
+                setSuccess(`✅ ${studentData.studentName} - Đã quét thành công`);
             } finally {
                 // Always remove from processing set
                 processingStudents.current.delete(studentData.studentId);
@@ -309,14 +341,24 @@ export default function QRScannerPage() {
                                 onChange={(e) => setAttendanceDate(e.target.value)}
                             />
                             {attendanceDate && (
-                                <p style={{
-                                    fontSize: 'var(--font-size-sm)',
-                                    color: 'var(--color-primary)',
-                                    marginTop: 'var(--spacing-xs)',
-                                    fontWeight: '500'
-                                }}>
-                                    📅 {formatVietnameseDate(attendanceDate)}
-                                </p>
+                                <>
+                                    <p style={{
+                                        fontSize: 'var(--font-size-sm)',
+                                        color: 'var(--color-primary)',
+                                        marginTop: 'var(--spacing-xs)',
+                                        fontWeight: '500'
+                                    }}>
+                                        📅 {formatVietnameseDate(attendanceDate)}
+                                    </p>
+                                    <p style={{
+                                        fontSize: 'var(--font-size-xs)',
+                                        color: getAllowedAttendanceTypes(attendanceDate).length === 0 ? 'var(--color-danger)' : 'var(--color-success)',
+                                        marginTop: 'var(--spacing-xs)',
+                                        fontWeight: '600'
+                                    }}>
+                                        {getValidationHint(attendanceDate)}
+                                    </p>
+                                </>
                             )}
                         </div>
 
@@ -330,10 +372,14 @@ export default function QRScannerPage() {
                                 className="form-input"
                                 value={attendanceType}
                                 onChange={(e) => setAttendanceType(e.target.value)}
+                                disabled={getAllowedAttendanceTypes(attendanceDate).length === 0}
                             >
-                                <option value="Lễ Chúa Nhật">Lễ Chúa Nhật</option>
-                                <option value="Lễ Thứ 5">Lễ Thứ 5</option>
-                                <option value="Học Giáo Lý">Học Giáo Lý</option>
+                                {getAllowedAttendanceTypes(attendanceDate).map(type => (
+                                    <option key={type} value={type}>{type}</option>
+                                ))}
+                                {getAllowedAttendanceTypes(attendanceDate).length === 0 && (
+                                    <option value="">-- Ngày không hợp lệ --</option>
+                                )}
                             </select>
                         </div>
 

@@ -21,8 +21,6 @@ export const AuthProvider = ({ children }) => {
             const response = await authAPI.getMe();
             const data = response.data || response;
 
-            console.log('📥 Raw API response:', data);
-
             const newAssignedClasses = data.assignedClasses || data.assigned_classes || [];
             const oldAssignedClasses = user?.assignedClasses || [];
 
@@ -36,12 +34,10 @@ export const AuthProvider = ({ children }) => {
 
             setUser(userData);
             localStorage.setItem('user', JSON.stringify(userData));
-            console.log('✅ User data refreshed:', userData);
 
             // Check if assignedClasses changed
             const hasChanged = JSON.stringify(oldAssignedClasses.sort()) !== JSON.stringify(newAssignedClasses.sort());
             if (hasChanged) {
-                console.log('🔄 Assigned classes changed! Reloading page...');
                 setTimeout(() => window.location.reload(), 500);
             }
 

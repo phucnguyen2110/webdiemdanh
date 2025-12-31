@@ -2,6 +2,8 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { AuthProvider } from './contexts/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Navigation from './components/Navigation';
+import OfflineStatus from './components/OfflineStatus';
+import OfflineFirstTimeGuide from './components/OfflineFirstTimeGuide';
 import LoginPage from './pages/LoginPage';
 import UploadPage from './pages/UploadPage';
 import FilesPage from './pages/FilesPage';
@@ -11,6 +13,7 @@ import GradesPage from './pages/GradesPage';
 import HistoryPage from './pages/HistoryPage';
 import QRScannerPage from './pages/QRScannerPage';
 import AdminPage from './pages/AdminPage';
+import SyncMonitorPage from './pages/SyncMonitorPage';
 
 function App() {
     return (
@@ -25,6 +28,8 @@ function App() {
                         <ProtectedRoute>
                             <div style={{ minHeight: '100vh' }}>
                                 <Navigation />
+                                <OfflineStatus />
+                                <OfflineFirstTimeGuide />
                                 <Routes>
                                     <Route path="/" element={<UploadPage />} />
                                     <Route path="/files" element={<FilesPage />} />
@@ -34,10 +39,15 @@ function App() {
                                     <Route path="/qr-scanner" element={<QRScannerPage />} />
                                     <Route path="/history" element={<HistoryPage />} />
 
-                                    {/* Admin-only route */}
+                                    {/* Admin-only routes */}
                                     <Route path="/admin" element={
                                         <ProtectedRoute adminOnly>
                                             <AdminPage />
+                                        </ProtectedRoute>
+                                    } />
+                                    <Route path="/sync-monitor" element={
+                                        <ProtectedRoute adminOnly>
+                                            <SyncMonitorPage />
                                         </ProtectedRoute>
                                     } />
                                 </Routes>

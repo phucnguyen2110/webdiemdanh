@@ -1,0 +1,6 @@
+<!-- Placeholder SVG for icon-512.png -->
+<!-- Bạn nên thay thế file này bằng icon PNG thật 512x512px -->
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <rect width="512" height="512" fill="#4f46e5"/>
+  <text x="256" y="320" font-family="Arial" font-size="200" fill="white" text-anchor="middle">📋</text>
+</svg>

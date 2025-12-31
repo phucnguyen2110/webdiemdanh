@@ -30,7 +30,10 @@ export default function Navigation() {
         { path: '/attendance', label: '✅ Điểm danh', icon: '✅', shortLabel: 'Điểm danh' },
         { path: '/grades', label: '📝 Nhập điểm', icon: '📝', shortLabel: 'Nhập điểm' },
         { path: '/history', label: '📜 Lịch sử', icon: '📜', shortLabel: 'Lịch sử' },
-        ...(isAdmin() ? [{ path: '/admin', label: '👥 Quản lý TK', icon: '👥', shortLabel: 'Admin' }] : [])
+        ...(isAdmin() ? [
+            { path: '/admin', label: '👥 Quản lý TK', icon: '👥', shortLabel: 'Admin' },
+            { path: '/sync-monitor', label: '🔍 Sync Monitor', icon: '🔍', shortLabel: 'Sync' }
+        ] : [])
     ];
 
     // Filter out desktop-only items on mobile
