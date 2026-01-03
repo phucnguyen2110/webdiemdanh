@@ -18,9 +18,14 @@ export default function QRScannerPage() {
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
 
+    // UI State for success popup (auto hide)
+    const [showSuccessPopup, setShowSuccessPopup] = useState(false);
+    const [lastScannedName, setLastScannedName] = useState('');
+
     const scannerRef = useRef(null);
     const html5QrCodeRef = useRef(null);
     const processingStudents = useRef(new Set()); // Track students being processed
+    const fileInputRef = useRef(null);
 
     useEffect(() => {
         loadClasses();
@@ -40,6 +45,15 @@ export default function QRScannerPage() {
         setError('');
         setSuccess('');
     }, [selectedClassId, attendanceDate, attendanceType]);
+
+    // Auto hide success popup
+    useEffect(() => {
+        if (success) {
+            setShowSuccessPopup(true);
+            const timer = setTimeout(() => setShowSuccessPopup(false), 3000);
+            return () => clearTimeout(timer);
+        }
+    }, [success]);
 
     const loadClasses = async () => {
         try {
@@ -134,7 +148,22 @@ export default function QRScannerPage() {
                     html5QrCode = new Html5Qrcode("qr-reader");
                     html5QrCodeRef.current = html5QrCode;
 
-                    const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+                    // Responsive qrbox based on viewport
+                    const qrboxFunction = function (viewfinderWidth, viewfinderHeight) {
+                        const minEdgePercentage = 0.7; // 70%
+                        const minDimension = Math.min(viewfinderWidth, viewfinderHeight);
+                        const boxSize = Math.floor(minDimension * minEdgePercentage);
+                        return {
+                            width: boxSize,
+                            height: boxSize
+                        };
+                    };
+
+                    const config = {
+                        fps: 10,
+                        qrbox: qrboxFunction,
+                        aspectRatio: 1.0
+                    };
 
                     // Try back camera specifically for mobile
                     try {
@@ -209,14 +238,28 @@ export default function QRScannerPage() {
         setSuccess('');
 
         try {
-            const html5QrCode = new Html5Qrcode("qr-reader-file");
-            const imageDataUrl = await new Promise((resolve) => {
-                const reader = new FileReader();
-                reader.onload = (e) => resolve(e.target.result);
-                reader.readAsDataURL(file);
-            });
+            // Note: Html5Qrcode needs a container to scan file, we can reuse qr-reader or create a temp one.
+            // But scanFile acts on the instance. If we are scanning, we can use the instance.
+            // If not scanning, we need a new instance.
 
-            const result = await html5QrCode.scanFile(file, true);
+            // To simplify, we will only allow upload if we have an instance or create a temp one.
+            // The library supports scanFile without a started scanner but needs an instance.
+            // We'll create a temporary instance if one doesn't exist, attached to a dummy div or just try without element.
+            // Actually Html5Qrcode constructor requires element ID.
+
+            // We'll use the existing qr-reader div if available, or fail.
+            // In layout below, qr-reader is always present in scanning mode.
+            // If setup mode, we don't support file scan yet (logic limitation).
+            // Let's assume we are in scanning mode if button is visible.
+
+            let scanner = html5QrCodeRef.current;
+            if (!scanner) {
+                // Should not happen if button is only visible in scanning mode
+                const html5QrCode = new Html5Qrcode("qr-reader");
+                scanner = html5QrCode;
+            }
+
+            const result = await scanner.scanFile(file, true);
             await onScanSuccess(result);
 
             // Clear file input
@@ -285,6 +328,8 @@ export default function QRScannerPage() {
                     scannedAt: new Date().toLocaleTimeString('vi-VN')
                 }]);
 
+                setLastScannedName(studentData.studentName);
+
                 setError(''); // Clear any previous error
                 setSuccess(`✅ ${studentData.studentName} - Đã quét thành công`);
             } finally {
@@ -300,133 +345,316 @@ export default function QRScannerPage() {
         // Ignore scan errors (too frequent)
     };
 
+    // Get class name
+    const selectedClass = classes.find(c => c.id == selectedClassId);
+
     return (
-        <div className="container" style={{ paddingTop: '2rem', paddingBottom: '2rem' }}>
-            <div className="card">
-                <div className="card-header">
-                    <h2 className="card-title">📱 Điểm Danh Bằng QR Code</h2>
-                    <p className="card-subtitle">Quét mã QR của thiếu nhi để điểm danh</p>
-                </div>
+        <div className="flex-1 flex flex-col h-full overflow-hidden relative bg-background-light dark:bg-background-dark min-h-screen">
+            {/* Decorative background blob */}
+            <div className="absolute top-[-20%] right-[-10%] w-[600px] h-[600px] bg-primary/20 rounded-full blur-[120px] pointer-events-none z-0"></div>
+            <div className="absolute bottom-[-20%] left-[-10%] w-[500px] h-[500px] bg-blue-500/10 rounded-full blur-[100px] pointer-events-none z-0"></div>
 
-                {!scanning ? (
-                    <form onSubmit={(e) => { e.preventDefault(); startScanning(); }} style={{ padding: 'var(--spacing-lg)' }}>
-                        {/* Class selector */}
-                        <div className="form-group">
-                            <label htmlFor="classSelect" className="form-label">
-                                Chọn Lớp <span style={{ color: 'var(--color-danger)' }}>*</span>
-                            </label>
-                            <select
-                                id="classSelect"
-                                className="form-input"
-                                value={selectedClassId}
-                                onChange={(e) => setSelectedClassId(e.target.value)}
-                            >
-                                <option value="">-- Chọn lớp --</option>
-                                {classes.filter(c => canAccessClass(c.id)).map(c => (
-                                    <option key={c.id} value={c.id}>{c.name}</option>
-                                ))}
-                            </select>
-                        </div>
+            <div className={`flex-1 overflow-y-auto z-10 p-4 lg:p-10 pb-24 lg:pb-10`}>
+                <div className={`max-w-7xl mx-auto flex flex-col gap-4 lg:gap-6 ${!scanning ? 'min-h-[calc(100vh-160px)] justify-center items-center' : ''}`}>
 
-                        {/* Date */}
-                        <div className="form-group">
-                            <label htmlFor="attendanceDate" className="form-label">
-                                Ngày Điểm Danh
-                            </label>
-                            <input
-                                type="date"
-                                id="attendanceDate"
-                                className="form-input"
-                                value={attendanceDate}
-                                onChange={(e) => setAttendanceDate(e.target.value)}
-                            />
-                            {attendanceDate && (
-                                <>
-                                    <p style={{
-                                        fontSize: 'var(--font-size-sm)',
-                                        color: 'var(--color-primary)',
-                                        marginTop: 'var(--spacing-xs)',
-                                        fontWeight: '500'
-                                    }}>
-                                        📅 {formatVietnameseDate(attendanceDate)}
-                                    </p>
-                                    <p style={{
-                                        fontSize: 'var(--font-size-xs)',
-                                        color: getAllowedAttendanceTypes(attendanceDate).length === 0 ? 'var(--color-danger)' : 'var(--color-success)',
-                                        marginTop: 'var(--spacing-xs)',
-                                        fontWeight: '600'
-                                    }}>
-                                        {getValidationHint(attendanceDate)}
-                                    </p>
-                                </>
-                            )}
-                        </div>
+                    {!scanning ? (
+                        /* Setup Form Mode - Centered & Focused */
+                        <div className="w-full max-w-lg animate-fade-in-up">
+                            {/* Centered Header for Setup */}
+                            <div className="text-center mb-6 lg:mb-8">
+                                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-semibold mb-4">
+                                    <span className="material-symbols-outlined text-sm">qr_code_scanner</span>
+                                    Điểm Danh QR
+                                </div>
+                                <h2 className="text-2xl lg:text-4xl font-black text-slate-900 dark:text-white tracking-tight mb-2">
+                                    Chuẩn Bị Điểm Danh
+                                </h2>
+                                <p className="text-sm lg:text-base text-slate-500 dark:text-slate-400 px-4">
+                                    Vui lòng chọn thông tin lớp và ngày để bắt đầu
+                                </p>
+                            </div>
 
-                        {/* Type */}
-                        <div className="form-group">
-                            <label htmlFor="attendanceType" className="form-label">
-                                Loại Điểm Danh
-                            </label>
-                            <select
-                                id="attendanceType"
-                                className="form-input"
-                                value={attendanceType}
-                                onChange={(e) => setAttendanceType(e.target.value)}
-                                disabled={getAllowedAttendanceTypes(attendanceDate).length === 0}
-                            >
-                                {getAllowedAttendanceTypes(attendanceDate).map(type => (
-                                    <option key={type} value={type}>{type}</option>
-                                ))}
-                                {getAllowedAttendanceTypes(attendanceDate).length === 0 && (
-                                    <option value="">-- Ngày không hợp lệ --</option>
-                                )}
-                            </select>
-                        </div>
+                            <div className="glass-panel p-6 lg:p-8 rounded-2xl lg:rounded-3xl shadow-xl border border-white/50 relative overflow-hidden mx-2 lg:mx-0">
+                                {/* Decorative top gradient line */}
+                                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary via-purple-400 to-blue-400"></div>
 
-                        <button type="submit" className="btn btn-primary" style={{ width: '100%' }}>
-                            📷 Bắt Đầu Quét QR
-                        </button>
-
-
-                    </form>
-                ) : (
-                    <div style={{ padding: 'var(--spacing-lg)' }}>
-                        {/* QR Scanner */}
-                        <div id="qr-reader" style={{ width: '100%', marginBottom: 'var(--spacing-lg)' }}></div>
-
-                        {/* Scanned list */}
-                        <div style={{ marginBottom: 'var(--spacing-lg)' }}>
-                            <h4>Đã điểm danh: {scannedStudents.length} thiếu nhi</h4>
-                            <div style={{ maxHeight: '200px', overflowY: 'auto', marginTop: 'var(--spacing-md)' }}>
-                                {scannedStudents.map((student, idx) => (
-                                    <div key={idx} className="alert alert-success" style={{ marginBottom: 'var(--spacing-sm)' }}>
-                                        ✅ {student.baptismalName} {student.studentName}
+                                <form onSubmit={(e) => { e.preventDefault(); startScanning(); }} className="flex flex-col gap-5 lg:gap-6 pt-2">
+                                    <div className="form-group mb-0">
+                                        <label htmlFor="classSelect" className="block text-sm font-bold text-slate-700 dark:text-slate-200 mb-2">
+                                            Chọn Lớp <span className="text-red-500">*</span>
+                                        </label>
+                                        <div className="relative">
+                                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                                <span className="material-symbols-outlined text-slate-400">school</span>
+                                            </div>
+                                            <select
+                                                id="classSelect"
+                                                className="form-select w-full pl-10 py-3 rounded-xl border-slate-200 dark:border-slate-700 bg-slate-50/50 focus:ring-primary focus:border-primary transition-all font-medium text-sm lg:text-base"
+                                                value={selectedClassId}
+                                                onChange={(e) => setSelectedClassId(e.target.value)}
+                                            >
+                                                <option value="">-- Chọn lớp --</option>
+                                                {classes.filter(c => canAccessClass(c.id)).map(c => (
+                                                    <option key={c.id} value={c.id}>
+                                                        {c.name} {c.students_count !== undefined ? `(${c.students_count} thiếu nhi)` : ''}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </div>
                                     </div>
-                                ))}
+
+                                    <div className="form-group mb-0">
+                                        <label htmlFor="attendanceDate" className="block text-sm font-bold text-slate-700 dark:text-slate-200 mb-2">
+                                            Ngày Điểm Danh
+                                        </label>
+                                        <div className="relative">
+                                            <input
+                                                type="date"
+                                                id="attendanceDate"
+                                                className="form-input w-full pl-4 lg:pl-10 py-3 rounded-xl border-slate-200 dark:border-slate-700 bg-slate-50/50 focus:ring-primary focus:border-primary transition-all font-medium text-sm lg:text-base text-center lg:text-left"
+                                                value={attendanceDate}
+                                                onChange={(e) => setAttendanceDate(e.target.value)}
+                                            />
+                                        </div>
+                                        {attendanceDate && (
+                                            <div className="mt-3 p-3 rounded-lg bg-primary/5 border border-primary/10 flex items-start gap-3">
+                                                <span className="material-symbols-outlined text-primary text-lg mt-0.5 shrink-0">info</span>
+                                                <div className="text-sm">
+                                                    <p className="font-semibold text-primary">
+                                                        {formatVietnameseDate(attendanceDate)}
+                                                    </p>
+                                                    <p className={`mt-1 font-medium ${getAllowedAttendanceTypes(attendanceDate).length === 0 ? 'text-red-500' : 'text-slate-600'}`}>
+                                                        {getValidationHint(attendanceDate)}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <div className="form-group mb-0">
+                                        <label htmlFor="attendanceType" className="block text-sm font-bold text-slate-700 dark:text-slate-200 mb-2">
+                                            Loại Điểm Danh
+                                        </label>
+                                        <div className="relative">
+                                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                                <span className="material-symbols-outlined text-slate-400">category</span>
+                                            </div>
+                                            <select
+                                                id="attendanceType"
+                                                className="form-select w-full pl-10 py-3 rounded-xl border-slate-200 dark:border-slate-700 bg-slate-50/50 focus:ring-primary focus:border-primary transition-all font-medium text-sm lg:text-base"
+                                                value={attendanceType}
+                                                onChange={(e) => setAttendanceType(e.target.value)}
+                                                disabled={getAllowedAttendanceTypes(attendanceDate).length === 0}
+                                            >
+                                                {getAllowedAttendanceTypes(attendanceDate).map(type => (
+                                                    <option key={type} value={type}>{type}</option>
+                                                ))}
+                                                {getAllowedAttendanceTypes(attendanceDate).length === 0 && (
+                                                    <option value="">-- Ngày không hợp lệ --</option>
+                                                )}
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <button
+                                        type="submit"
+                                        className="mt-2 lg:mt-4 w-full py-3.5 lg:py-4 px-6 bg-gradient-to-r from-primary to-primary-dark hover:from-primary-dark hover:to-indigo-800 text-white rounded-xl font-bold text-base lg:text-lg shadow-xl shadow-primary/20 transition-all transform hover:-translate-y-1 active:translate-y-0 flex items-center justify-center gap-2 group"
+                                    >
+                                        <span className="material-symbols-outlined group-hover:scale-110 transition-transform">qr_code_scanner</span>
+                                        Bắt Đầu Quét
+                                    </button>
+                                </form>
+
+                                {error && (
+                                    <div className="mt-6 p-4 rounded-xl bg-red-50 border border-red-100 text-red-600 text-sm flex items-start gap-3 animate-pulse">
+                                        <span className="material-symbols-outlined text-red-500 shrink-0">error</span>
+                                        <span>{error}</span>
+                                    </div>
+                                )}
                             </div>
                         </div>
+                    ) : (
+                        /* Scanner Mode - Full Width Dashboard */
+                        <>
+                            {/* Standard Header for Scanner View */}
+                            <div className="flex flex-col gap-2 animate-fade-in-down">
+                                <div className="flex flex-wrap justify-between items-end gap-3">
+                                    <div className="flex-1">
+                                        <nav className="flex items-center gap-2 text-xs lg:text-sm mb-1">
+                                            <span className="text-slate-500">Giáo Lý</span>
+                                            <span className="text-slate-300">/</span>
+                                            <span className="text-primary font-medium">QR</span>
+                                        </nav>
+                                        <h2 className="text-2xl lg:text-4xl font-black text-slate-900 dark:text-white tracking-tight">
+                                            Đang Quét
+                                        </h2>
+                                        <div className="flex flex-wrap items-center gap-2 mt-2">
+                                            <span className="px-2 lg:px-3 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs lg:text-sm font-bold border border-slate-200 dark:border-slate-700">
+                                                {selectedClass?.name}
+                                            </span>
+                                            <span className="px-2 lg:px-3 py-1 rounded-full bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-300 text-xs lg:text-sm font-bold border border-blue-100 dark:border-blue-800 truncate max-w-[150px]">
+                                                {attendanceType}
+                                            </span>
+                                        </div>
+                                    </div>
 
-                        <button onClick={stopScanning} className="btn btn-secondary" style={{ width: '100%' }}>
-                            ⏹️ Dừng Quét
-                        </button>
-                    </div>
-                )}
+                                    <button
+                                        onClick={stopScanning}
+                                        className="shrink-0 glass-button px-4 lg:px-6 py-2 lg:py-2.5 rounded-xl flex items-center gap-2 text-xs lg:text-sm font-bold text-red-600 hover:text-white hover:bg-red-500 transition-all border-red-100 hover:border-red-500 shadow-sm"
+                                    >
+                                        <span className="material-symbols-outlined text-lg">stop_circle</span>
+                                        <span className="hidden sm:inline">Dừng & Lưu</span>
+                                        <span className="sm:hidden">Dừng</span>
+                                    </button>
+                                </div>
+                            </div>
 
-                {/* Messages */}
-                {error && (
-                    <div className="alert alert-danger" style={{
-                        margin: 'var(--spacing-lg)',
-                        whiteSpace: 'pre-line',
-                        textAlign: 'left'
-                    }}>
-                        {error}
-                    </div>
-                )}
-                {success && (
-                    <div className="alert alert-success" style={{ margin: 'var(--spacing-lg)' }}>
-                        {success}
-                    </div>
-                )}
+                            <div className="flex flex-col lg:flex-row gap-4 lg:gap-6 mt-2 h-full min-h-[500px] animate-fade-in-up">
+                                {/* Left Column: Camera Viewport */}
+                                <div className="flex-grow lg:w-2/3 flex flex-col gap-4">
+                                    <div className="relative w-full aspect-square md:aspect-video bg-black rounded-2xl lg:rounded-3xl overflow-hidden shadow-2xl ring-4 ring-white/20 group">
+                                        {/* Camera Feed - ID is Critical */}
+                                        <div id="qr-reader" className="w-full h-full object-cover"></div>
+
+                                        {/* Overlays always on top */}
+                                        <div className="absolute inset-0 pointer-events-none z-10">
+                                            {/* Scanning Reticle */}
+                                            <div className="absolute inset-0 flex items-center justify-center">
+                                                <div className="relative w-56 h-56 lg:w-64 lg:h-64 border-2 border-white/30 rounded-2xl overflow-hidden">
+                                                    {/* Corners */}
+                                                    <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-primary rounded-tl-lg"></div>
+                                                    <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-primary rounded-tr-lg"></div>
+                                                    <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-primary rounded-bl-lg"></div>
+                                                    <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-primary rounded-br-lg"></div>
+                                                    {/* Scanning Laser Animation */}
+                                                    <div className="absolute w-full h-8 bg-gradient-to-b from-primary/50 to-transparent shadow-[0_0_20px_rgba(127,13,242,0.8)] scan-anim"></div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Success Popup */}
+                                        {showSuccessPopup && (
+                                            <div className="absolute top-8 left-1/2 -translate-x-1/2 z-20 pointer-events-none w-max max-w-[90%]">
+                                                <div className="glass-panel px-4 py-3 lg:px-6 lg:py-4 rounded-xl lg:rounded-2xl flex items-center gap-3 lg:gap-4 shadow-xl animate-bounce duration-[2000ms] bg-white/95 backdrop-blur-xl border-l-4 border-green-500 scale-90 lg:scale-100">
+                                                    <div className="bg-green-100 text-green-600 rounded-full p-2">
+                                                        <span className="material-symbols-outlined text-xl lg:text-2xl font-bold block">check_circle</span>
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-xs lg:text-sm font-bold text-slate-800 uppercase tracking-wide opacity-70">Đã điểm danh</p>
+                                                        <p className="text-base lg:text-lg font-black text-slate-900 truncate max-w-[150px] lg:max-w-xs">{lastScannedName}</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* Camera Controls */}
+                                        <div className="absolute bottom-6 left-0 right-0 flex justify-center items-center gap-4 z-20 pointer-events-auto">
+                                            {/* Upload Image */}
+                                            <button
+                                                onClick={() => fileInputRef.current?.click()}
+                                                className="size-12 lg:size-14 rounded-full bg-black/40 hover:bg-black/60 backdrop-blur-md flex items-center justify-center transition-all border border-white/20 shadow-lg group"
+                                                title="Tải ảnh QR từ thư viện"
+                                            >
+                                                <span className="material-symbols-outlined text-xl lg:text-2xl text-white group-hover:scale-110 transition-transform">image</span>
+                                            </button>
+                                            <input
+                                                type="file"
+                                                ref={fileInputRef}
+                                                className="hidden"
+                                                accept="image/*"
+                                                onChange={handleFileUpload}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {/* Instructional Text */}
+                                    <div className="flex justify-between items-center px-4 py-3 bg-white/40 rounded-xl">
+                                        <p className="text-slate-600 text-xs lg:text-sm flex items-center gap-2 font-medium">
+                                            <span className="material-symbols-outlined text-primary text-base">qr_code_scanner</span>
+                                            <span className="mobile-hide">Di chuyển camera để mã QR nằm trong khung vuông.</span>
+                                            <span className="desktop-hide">Quét mã QR vào khung</span>
+                                        </p>
+                                        <div className="flex items-center gap-2">
+                                            <span className="relative flex h-2.5 w-2.5">
+                                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                                                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500"></span>
+                                            </span>
+                                            <span className="text-[10px] lg:text-xs font-bold text-red-500 uppercase tracking-wider">Live</span>
+                                        </div>
+                                    </div>
+
+                                    {error && (
+                                        <div className="glass-panel p-4 rounded-xl border-l-4 border-red-500 bg-red-50 text-red-700 flex items-center gap-3 shadow-sm">
+                                            <span className="material-symbols-outlined shrink-0">warning</span>
+                                            <div className="flex-1 min-w-0">
+                                                <p className="font-bold text-sm uppercase opacity-80">Lỗi Quét</p>
+                                                <p className="text-sm font-medium break-words">{error}</p>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Right Column: Recently Scanned - Collapsible or small on User request but here kept as column */}
+                                <div className="w-full lg:w-1/3 flex flex-col h-[400px] lg:h-auto">
+                                    <div className="glass-panel h-full rounded-2xl lg:rounded-3xl flex flex-col overflow-hidden shadow-xl bg-white/70 border border-white/60">
+                                        <div className="p-4 lg:p-5 border-b border-indigo-50 flex justify-between items-center bg-gradient-to-r from-white/60 to-indigo-50/30">
+                                            <div className="flex items-center gap-2">
+                                                <span className="material-symbols-outlined text-indigo-500">history</span>
+                                                <h3 className="font-bold text-slate-800 text-sm lg:text-base">Đã Quét</h3>
+                                            </div>
+                                            <span className="text-xs font-bold px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full border border-indigo-200">
+                                                {scannedStudents.length}
+                                            </span>
+                                        </div>
+                                        <div className="flex-1 overflow-y-auto p-3 lg:p-4 space-y-2 lg:space-y-3 custom-scrollbar">
+                                            {scannedStudents.length === 0 ? (
+                                                <div className="flex flex-col items-center justify-center h-full text-slate-400 gap-3 opacity-60">
+                                                    <div className="size-16 rounded-full bg-slate-100 flex items-center justify-center">
+                                                        <span className="material-symbols-outlined text-3xl text-slate-300">qr_code_2</span>
+                                                    </div>
+                                                    <p className="text-sm font-medium">Chưa có thiếu nhi nào</p>
+                                                </div>
+                                            ) : (
+                                                [...scannedStudents].reverse().map((student, idx) => (
+                                                    <div key={idx} className="flex items-center gap-3 p-3 bg-white rounded-xl border border-slate-100 shadow-sm hover:shadow-md transition-all group hover:border-primary/30">
+                                                        <div className="flex items-center justify-center size-8 lg:size-10 rounded-full shrink-0 bg-gradient-to-br from-primary to-purple-600 text-white font-bold text-xs lg:text-sm shadow-md">
+                                                            {student.studentName.charAt(0)}
+                                                        </div>
+                                                        <div className="flex-1 min-w-0">
+                                                            <p className="text-xs lg:text-sm font-bold text-slate-800 truncate group-hover:text-primary transition-colors">
+                                                                {student.baptismalName} {student.studentName}
+                                                            </p>
+                                                            <p className="text-[10px] lg:text-xs text-slate-500 flex items-center gap-1">
+                                                                <span className="material-symbols-outlined text-[10px] opacity-50">badge</span>
+                                                                {student.studentId}
+                                                            </p>
+                                                        </div>
+                                                        <div className="flex flex-col items-end gap-1">
+                                                            <span className="px-1.5 lg:px-2 py-0.5 rounded text-[10px] font-bold bg-green-100 text-green-700 border border-green-200 flex items-center gap-1">
+                                                                <span className="material-symbols-outlined text-[10px]">check</span>
+                                                                <span className="hidden sm:inline">HIỆN DIỆN</span>
+                                                            </span>
+                                                            <span className="text-[10px] text-slate-400 font-medium">{student.scannedAt}</span>
+                                                        </div>
+                                                    </div>
+                                                ))
+                                            )}
+                                        </div>
+                                        <div className="p-4 border-t border-slate-100 bg-slate-50/50">
+                                            <button
+                                                onClick={stopScanning}
+                                                className="w-full py-3 rounded-xl text-sm font-bold text-primary hover:text-white hover:bg-primary transition-all border border-primary/20 hover:border-primary flex items-center justify-center gap-2"
+                                            >
+                                                <span className="material-symbols-outlined text-lg">save</span>
+                                                Hoàn Tất & Lưu
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </>
+                    )}
+                </div>
             </div>
         </div>
     );

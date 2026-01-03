@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { classesAPI, attendanceAPI, gradesAPI, exportAPI } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import { filterClassesByPermission } from '../utils/classFilter';
+import { invalidateCache } from '../utils/excelCache';
 
 export default function HistoryPage() {
     const { user } = useAuth();
@@ -11,7 +12,7 @@ export default function HistoryPage() {
 
     // Attendance states
     const [sessions, setSessions] = useState([]);
-    const [selectedSession, setSelectedSession] = useState(null);
+    const [selectedSession, setSelectedSession] = useState(null); // Expanded session ID
     const [sessionDetails, setSessionDetails] = useState(null);
 
     // Grades states
@@ -21,6 +22,43 @@ export default function HistoryPage() {
     const [loadingDetails, setLoadingDetails] = useState(false);
     const [exporting, setExporting] = useState(false);
     const [error, setError] = useState('');
+
+    // Computed stats
+    const stats = useMemo(() => {
+        if (!sessions.length) return { monthlyAvg: 0, total: 0, bestRate: 0 };
+        const total = sessions.length;
+        // Simple average calculation
+        const totalPresent = sessions.reduce((acc, s) => acc + (s.presentCount || 0), 0);
+        const totalStudents = sessions.reduce((acc, s) => acc + (s.totalCount || 0), 0);
+        const avg = totalStudents > 0 ? Math.round((totalPresent / totalStudents) * 100) : 0;
+
+        // Best attendance
+        const best = sessions.reduce((max, s) => {
+            const rate = s.totalCount > 0 ? (s.presentCount / s.totalCount) : 0;
+            return rate > max ? rate : max;
+        }, 0);
+
+        return {
+            monthlyAvg: avg,
+            total,
+            bestRate: Math.round(best * 100)
+        };
+    }, [sessions]);
+
+    // Group sessions by Date (Day)
+    const groupedSessions = useMemo(() => {
+        const groups = {};
+        sessions.forEach(session => {
+            const date = new Date(session.attendanceDate).toDateString(); // Group by date string
+            if (!groups[date]) groups[date] = [];
+            groups[date].push(session);
+        });
+        // Sort keys desc (newest first)
+        return Object.keys(groups).sort((a, b) => new Date(b) - new Date(a)).map(date => ({
+            date,
+            items: groups[date]
+        }));
+    }, [sessions]);
 
     // Load danh sách lớp
     useEffect(() => {
@@ -46,15 +84,12 @@ export default function HistoryPage() {
     const loadClasses = async () => {
         try {
             const result = await classesAPI.getAll();
-            // Transform snake_case to camelCase
             const transformedClasses = (result.classes || []).map(cls => ({
                 id: cls.id,
                 name: cls.name,
                 createdAt: cls.created_at,
                 studentsCount: cls.students_count
             }));
-
-            // Filter classes by user permission
             const filteredClasses = filterClassesByPermission(transformedClasses, user, false);
             setClasses(filteredClasses);
         } catch (err) {
@@ -88,7 +123,12 @@ export default function HistoryPage() {
         }
     };
 
-    const loadSessionDetails = async (sessionId) => {
+    const toggleSessionDetails = async (sessionId) => {
+        if (selectedSession === sessionId) {
+            setSelectedSession(null); // Collapse
+            return;
+        }
+
         setLoadingDetails(true);
         setError('');
         try {
@@ -102,22 +142,18 @@ export default function HistoryPage() {
         }
     };
 
+    // Alias for compatibility if needed, but toggle is better for UI
+    const loadSessionDetails = toggleSessionDetails;
+
     const handleDeleteSession = async (sessionId, event) => {
-        event.stopPropagation(); // Prevent triggering loadSessionDetails
-
-        if (!window.confirm('Bạn có chắc chắn muốn xóa buổi điểm danh này?')) {
-            return;
-        }
-
+        event.stopPropagation();
+        if (!window.confirm('Bạn có chắc chắn muốn xóa buổi điểm danh này?')) return;
         setLoading(true);
         setError('');
         try {
             await attendanceAPI.deleteSession(sessionId);
-
-            // Refresh session list
             await loadHistory(selectedClassId);
-
-            // Clear details if deleted session was selected
+            invalidateCache(selectedClassId);
             if (selectedSession === sessionId) {
                 setSelectedSession(null);
                 setSessionDetails(null);
@@ -129,29 +165,50 @@ export default function HistoryPage() {
         }
     };
 
-    const handleDeleteStudentAttendance = async (sessionId, studentId, studentName, event) => {
-        event.stopPropagation();
-
-        if (!window.confirm(`Bạn có chắc chắn muốn xóa điểm danh của em "${studentName}"?`)) {
-            return;
-        }
-
+    const handleUpdateStudentStatus = async (sessionId, studentId, isPresent, studentName) => {
         try {
-            await attendanceAPI.deleteStudentAttendance(sessionId, studentId);
-
-            // Cập nhật UI local: Chuyển trạng thái sang Vắng (isPresent = false) thay vì xóa khỏi list
+            await attendanceAPI.updateStudentStatus(sessionId, studentId, isPresent);
             setSessionDetails(prev => ({
                 ...prev,
-                records: prev.records.map(r =>
-                    r.studentId === studentId ? { ...r, isPresent: false } : r
-                )
+                records: prev.records.map(r => r.studentId === studentId ? { ...r, isPresent } : r)
             }));
-
-            // Reload count ở list bên ngoài
-            loadHistory(selectedClassId);
-
+            setSessions(prev => prev.map(s => {
+                if (s.id === sessionId) {
+                    const change = isPresent ? 1 : -1;
+                    return { ...s, presentCount: s.presentCount + change };
+                }
+                return s;
+            }));
+            invalidateCache(selectedClassId);
         } catch (err) {
-            alert('Lỗi xóa điểm danh: ' + err.message);
+            alert(`Lỗi cập nhật trạng thái của em ${studentName}: ` + err.message);
+        }
+    };
+
+    const handleBulkUpdate = async (targetIsPresent) => {
+        if (!sessionDetails) return;
+        const recordsToUpdate = sessionDetails.records.filter(r => r.isPresent !== targetIsPresent);
+        if (recordsToUpdate.length === 0) {
+            alert(targetIsPresent ? 'Tất cả đã có mặt rồi!' : 'Tất cả đã vắng mặt rồi!');
+            return;
+        }
+        const actionName = targetIsPresent ? 'CÓ MẶT' : 'DANG VẮNG';
+        if (!window.confirm(`Bạn có chắc muốn chuyển trạng thái ${recordsToUpdate.length} em thành "${actionName}"?`)) return;
+
+        setLoadingDetails(true);
+        try {
+            await Promise.all(recordsToUpdate.map(record =>
+                attendanceAPI.updateStudentStatus(sessionDetails.session.id, record.studentId, targetIsPresent)
+            ));
+            const result = await attendanceAPI.getSession(sessionDetails.session.id);
+            setSessionDetails(result);
+            loadHistory(selectedClassId);
+            invalidateCache(selectedClassId);
+            alert('Đã cập nhật thành công!');
+        } catch (err) {
+            alert('Có lỗi xảy ra khi cập nhật hàng loạt: ' + err.message);
+        } finally {
+            setLoadingDetails(false);
         }
     };
 
@@ -160,7 +217,6 @@ export default function HistoryPage() {
             setError('Vui lòng chọn lớp');
             return;
         }
-
         setExporting(true);
         setError('');
         try {
@@ -172,15 +228,15 @@ export default function HistoryPage() {
         }
     };
 
-    const formatDate = (dateString) => {
+    const formatDate = (dateString, options = {}) => {
         return new Date(dateString).toLocaleDateString('vi-VN', {
+            ...options,
             year: 'numeric',
             month: '2-digit',
             day: '2-digit'
         });
     };
 
-    // Helper function to convert backend format to Vietnamese display
     const formatAttendanceType = (type) => {
         const mapping = {
             'Hoc Giao Ly': 'Học Giáo Lý',
@@ -190,452 +246,284 @@ export default function HistoryPage() {
         return mapping[type] || type;
     };
 
+    const getSessionInitials = (type) => {
+        const mapping = {
+            'Hoc Giao Ly': 'H',
+            'Học Giáo Lý': 'H',
+            'Le Thu 5': 'T5',
+            'Lễ Thứ 5': 'T5',
+            'Le Chua Nhat': 'L',
+            'Lễ Chúa Nhật': 'L'
+        };
+        return mapping[type] || '??';
+    };
+
     return (
-        <div className="container" style={{ paddingTop: '2rem', paddingBottom: '2rem' }}>
-            <div className="card">
-                <div className="card-header">
-                    <div className="flex justify-between items-center">
-                        <div>
-                            <h2 className="card-title">📊 Lịch Sử</h2>
-                            <p className="card-subtitle">Xem lại lịch sử điểm danh và điểm số</p>
-                        </div>
-                        <button
-                            className="btn btn-success"
-                            onClick={handleExport}
-                            disabled={!selectedClassId || exporting || (activeTab === 'attendance' && sessions.length === 0)}
-                        >
-                            {exporting ? (
-                                <>
-                                    <span className="spinner" style={{ width: '1rem', height: '1rem', borderWidth: '2px' }}></span>
-                                    Đang export...
-                                </>
-                            ) : (
-                                <>
-                                    📥 Tải file Excel
-                                </>
-                            )}
-                        </button>
-                    </div>
-                </div>
-
-                {/* Tabs */}
-                <div style={{
-                    display: 'flex',
-                    gap: 'var(--spacing-sm)',
-                    borderBottom: '2px solid var(--color-gray-200)',
-                    marginBottom: 'var(--spacing-lg)'
-                }}>
-                    <button
-                        onClick={() => setActiveTab('attendance')}
-                        style={{
-                            padding: 'var(--spacing-md) var(--spacing-lg)',
-                            background: 'transparent',
-                            border: 'none',
-                            borderBottom: activeTab === 'attendance' ? '3px solid var(--color-primary)' : '3px solid transparent',
-                            color: activeTab === 'attendance' ? 'var(--color-primary)' : 'var(--color-gray-600)',
-                            fontWeight: activeTab === 'attendance' ? '600' : '400',
-                            cursor: 'pointer',
-                            transition: 'all var(--transition-fast)',
-                            fontSize: 'var(--font-size-base)'
-                        }}
-                    >
-                        ✅ Điểm danh
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('grades')}
-                        style={{
-                            padding: 'var(--spacing-md) var(--spacing-lg)',
-                            background: 'transparent',
-                            border: 'none',
-                            borderBottom: activeTab === 'grades' ? '3px solid var(--color-primary)' : '3px solid transparent',
-                            color: activeTab === 'grades' ? 'var(--color-primary)' : 'var(--color-gray-600)',
-                            fontWeight: activeTab === 'grades' ? '600' : '400',
-                            cursor: 'pointer',
-                            transition: 'all var(--transition-fast)',
-                            fontSize: 'var(--font-size-base)',
-                            display: 'none' // Hidden
-                        }}
-                    >
-                        📝 Điểm số
-                    </button>
-                </div>
-
-                {/* Info note */}
-                <div style={{
-                    background: activeTab === 'attendance'
-                        ? 'linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%)'
-                        : 'linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%)',
-                    padding: 'var(--spacing-md)',
-                    borderRadius: 'var(--radius-lg)',
-                    marginBottom: 'var(--spacing-lg)',
-                    border: activeTab === 'attendance' ? '1px solid #90caf9' : '1px solid #ffb74d',
-                    display: 'flex',
-                    alignItems: 'start',
-                    gap: 'var(--spacing-sm)'
-                }}>
-                    <div style={{ fontSize: '1.5rem', flexShrink: 0 }}>ℹ️</div>
-                    <div>
-                        <strong style={{
-                            color: activeTab === 'attendance' ? '#1565c0' : '#e65100',
-                            display: 'block',
-                            marginBottom: 'var(--spacing-xs)'
-                        }}>
-                            {activeTab === 'attendance' ? 'Lịch sử điểm danh' : 'Lịch sử điểm số'}
-                        </strong>
-                        <p style={{
-                            color: activeTab === 'attendance' ? '#1976d2' : '#f57c00',
-                            fontSize: 'var(--font-size-sm)',
-                            margin: 0,
-                            lineHeight: '1.5'
-                        }}>
-                            {activeTab === 'attendance'
-                                ? 'Trang này hiển thị tất cả lịch sử điểm danh (cả thủ công và quét mã QR). Bạn có thể xem chi tiết và xóa các buổi điểm danh.'
-                                : 'Xem lịch sử các lần chỉnh sửa điểm (M, 1T, Thi) cho từng lớp và học kỳ.'
-                            }
-                        </p>
-                    </div>
-                </div>
-
-                {/* Chọn lớp */}
-                <div className="form-group">
-                    <label htmlFor="classSelect" className="form-label">
-                        Chọn lớp
-                    </label>
-                    <select
-                        id="classSelect"
-                        className="form-select"
-                        value={selectedClassId}
-                        onChange={(e) => setSelectedClassId(e.target.value)}
-                    >
-                        <option value="">-- Chọn lớp --</option>
-                        {classes.map(cls => (
-                            <option key={cls.id} value={cls.id}>
-                                {cls.name} ({cls.studentsCount} thiếu nhi)
-                            </option>
-                        ))}
-                    </select>
-                </div>
-
-                {/* Error message */}
-                {error && (
-                    <div className="alert alert-danger">
-                        {error}
-                    </div>
-                )}
-
-                {/* Content based on active tab */}
-                {activeTab === 'attendance' ? (
-                    // ATTENDANCE HISTORY
-                    <>
-                        {/* Danh sách buổi điểm danh */}
-                        {loading ? (
-                            <div className="loading-container">
-                                <span className="spinner"></span>
-                                <p>Đang tải lịch sử...</p>
+        <div className="flex flex-col h-screen w-full bg-background-dark text-white font-display overflow-hidden">
+            {/* Scrollable Content */}
+            <div className="flex-1 overflow-y-auto scroll-smooth">
+                {/* Header Section */}
+                <header className="flex-none px-4 md:px-8 py-6 border-b border-border-glass bg-[#191022]/50 backdrop-blur-sm z-10">
+                    <div className="max-w-[1200px] mx-auto flex flex-col gap-6">
+                        {/* Title Row */}
+                        <div className="flex flex-wrap justify-between items-end gap-4">
+                            <div className="flex flex-col gap-1">
+                                <h2 className="text-white text-3xl font-black tracking-tight">Lịch Sử Điểm Danh</h2>
+                                <p className="text-[#ad90cb] text-sm font-normal">Xem lại lịch sử điểm danh.</p>
                             </div>
-                        ) : sessions.length > 0 ? (
-                            <div className="grid grid-2">
-                                {/* Danh sách sessions */}
-                                <div>
-                                    <h3 style={{ fontSize: 'var(--font-size-lg)', marginBottom: 'var(--spacing-md)' }}>
-                                        Các buổi điểm danh ({sessions.length})
-                                    </h3>
-                                    <div style={{
-                                        maxHeight: '600px',
-                                        overflowY: 'auto',
-                                        border: '2px solid var(--color-gray-100)',
-                                        borderRadius: 'var(--radius-md)'
-                                    }}>
-                                        {sessions.map((session) => (
-                                            <div
-                                                key={session.id}
-                                                onClick={() => loadSessionDetails(session.id)}
-                                                style={{
-                                                    padding: 'var(--spacing-md)',
-                                                    borderBottom: '1px solid var(--color-gray-100)',
-                                                    cursor: 'pointer',
-                                                    background: selectedSession === session.id ? 'var(--color-primary-light)' : 'transparent',
-                                                    transition: 'background var(--transition-fast)',
-                                                    display: 'flex',
-                                                    justifyContent: 'space-between',
-                                                    alignItems: 'center'
-                                                }}
-                                                onMouseEnter={(e) => {
-                                                    if (selectedSession !== session.id) {
-                                                        e.currentTarget.style.background = 'var(--color-gray-50)';
-                                                    }
-                                                }}
-                                                onMouseLeave={(e) => {
-                                                    if (selectedSession !== session.id) {
-                                                        e.currentTarget.style.background = 'transparent';
-                                                    }
-                                                }}
-                                            >
-                                                <div style={{ flex: 1 }}>
-                                                    <div style={{ fontWeight: '600', marginBottom: 'var(--spacing-xs)' }}>
-                                                        {formatDate(session.attendanceDate)}
-                                                    </div>
-                                                    <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-gray-500)', marginBottom: 'var(--spacing-xs)' }}>
-                                                        {formatAttendanceType(session.attendanceType)}
-                                                    </div>
-                                                    <div style={{
-                                                        fontSize: 'var(--font-size-sm)',
-                                                        color: 'var(--color-gray-600)',
-                                                        marginBottom: 'var(--spacing-xs)',
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        gap: 'var(--spacing-xs)'
-                                                    }}>
-                                                        {session.attendanceMethod === 'qr' ? '📱 Quét mã QR' : '✍️ Thủ công'}
-                                                    </div>
-                                                    <div style={{ fontSize: 'var(--font-size-sm)' }}>
-                                                        <span style={{ color: 'var(--color-success)', fontWeight: '600' }}>
-                                                            {session.presentCount}
-                                                        </span>
-                                                        <span style={{ color: 'var(--color-gray-400)' }}>
-                                                            {' / '}{session.totalCount} thiếu nhi
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                                <button
-                                                    onClick={(e) => handleDeleteSession(session.id, e)}
-                                                    style={{
-                                                        background: 'transparent',
-                                                        border: 'none',
-                                                        color: 'var(--color-danger)',
-                                                        cursor: 'pointer',
-                                                        fontSize: 'var(--font-size-xl)',
-                                                        padding: 'var(--spacing-sm)',
-                                                        borderRadius: 'var(--radius-sm)',
-                                                        transition: 'background var(--transition-fast)'
-                                                    }}
-                                                    onMouseEnter={(e) => e.currentTarget.style.background = 'var(--color-danger-light)'}
-                                                    onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-                                                    title="Xóa buổi điểm danh"
-                                                >
-                                                    🗑️
-                                                </button>
-                                            </div>
-                                        ))}
+                            <button
+                                onClick={handleExport}
+                                disabled={!selectedClassId || exporting}
+                                className={`bg-primary hover:bg-primary-hover text-white px-5 py-2.5 rounded-lg text-sm font-semibold flex items-center gap-2 transition-all shadow-lg shadow-primary/20 ${(!selectedClassId || exporting) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            >
+                                <span className="material-symbols-outlined text-[20px]">download</span>
+                                {exporting ? 'Đang xuất...' : 'Xuất Excel'}
+                            </button>
+                        </div>
+                        {/* Stats Widgets - Only show if class selected and sessions available */}
+                        {selectedClassId && activeTab === 'attendance' && (
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div className="bg-surface-glass backdrop-blur-xl border border-border-glass p-5 rounded-xl flex flex-col gap-1 relative overflow-hidden group">
+                                    <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                                        <span className="material-symbols-outlined text-4xl">calendar_month</span>
+                                    </div>
+                                    <p className="text-[#ad90cb] text-sm font-medium">Trung bình tháng</p>
+                                    <div className="flex items-end gap-2">
+                                        <p className="text-white text-2xl font-bold">{stats.monthlyAvg}%</p>
                                     </div>
                                 </div>
-
-                                {/* Chi tiết session */}
-                                <div>
-                                    {loadingDetails ? (
-                                        <div className="loading-container">
-                                            <span className="spinner"></span>
-                                            <p>Đang tải chi tiết...</p>
-                                        </div>
-                                    ) : sessionDetails ? (
-                                        <>
-                                            <h3 style={{ fontSize: 'var(--font-size-lg)', marginBottom: 'var(--spacing-md)' }}>
-                                                Chi tiết buổi điểm danh
-                                            </h3>
-                                            <div style={{
-                                                padding: 'var(--spacing-lg)',
-                                                background: 'var(--color-gray-50)',
-                                                borderRadius: 'var(--radius-md)',
-                                                marginBottom: 'var(--spacing-md)'
-                                            }}>
-                                                <div style={{ marginBottom: 'var(--spacing-sm)' }}>
-                                                    <strong>Ngày:</strong> {formatDate(sessionDetails.session.attendanceDate)}
-                                                </div>
-                                                <div style={{ marginBottom: 'var(--spacing-sm)' }}>
-                                                    <strong>Loại:</strong> {formatAttendanceType(sessionDetails.session.attendanceType)}
-                                                </div>
-                                                <div>
-                                                    <strong>Lớp:</strong> {sessionDetails.session.className}
-                                                </div>
-                                            </div>
-
-                                            <div style={{
-                                                maxHeight: '500px',
-                                                overflowY: 'auto',
-                                                border: '2px solid var(--color-gray-100)',
-                                                borderRadius: 'var(--radius-md)'
-                                            }}>
-                                                {sessionDetails.records.map((record) => (
-                                                    <div
-                                                        key={record.id}
-                                                        style={{
-                                                            padding: 'var(--spacing-md)',
-                                                            borderBottom: '1px solid var(--color-gray-100)',
-                                                            background: record.isPresent ? 'var(--color-success-light)' : 'transparent',
-                                                            display: 'flex',
-                                                            alignItems: 'center',
-                                                            justifyContent: 'space-between',
-                                                            gap: 'var(--spacing-md)'
-                                                        }}
-                                                    >
-                                                        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-md)' }}>
-                                                            <span style={{
-                                                                fontSize: 'var(--font-size-xl)',
-                                                                width: '1.5rem'
-                                                            }}>
-                                                                {record.isPresent ? '✅' : '❌'}
-                                                            </span>
-                                                            <span>
-                                                                <strong>{record.stt}.</strong> {record.baptismalName ? `${record.baptismalName} ` : ''}{record.fullName}
-                                                            </span>
-                                                        </div>
-                                                        {record.isPresent && (
-                                                            <button
-                                                                onClick={(e) => handleDeleteStudentAttendance(sessionDetails.session.id, record.studentId, record.fullName, e)}
-                                                                className="btn btn-sm btn-danger"
-                                                                style={{
-                                                                    padding: '0.25rem 0.5rem',
-                                                                    fontSize: '0.8rem'
-                                                                }}
-                                                                title="Xóa lượt điểm danh này"
-                                                            >
-                                                                🗑️ Xóa
-                                                            </button>
-                                                        )}
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </>
-                                    ) : (
-                                        <div style={{
-                                            padding: 'var(--spacing-3xl)',
-                                            textAlign: 'center',
-                                            color: 'var(--color-gray-400)'
-                                        }}>
-                                            👈 Chọn một buổi điểm danh để xem chi tiết
-                                        </div>
-                                    )}
+                                <div className="bg-surface-glass backdrop-blur-xl border border-border-glass p-5 rounded-xl flex flex-col gap-1 relative overflow-hidden group">
+                                    <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                                        <span className="material-symbols-outlined text-4xl">groups</span>
+                                    </div>
+                                    <p className="text-[#ad90cb] text-sm font-medium">Tổng buổi</p>
+                                    <div className="flex items-end gap-2">
+                                        <p className="text-white text-2xl font-bold">{stats.total}</p>
+                                    </div>
+                                </div>
+                                <div className="bg-surface-glass backdrop-blur-xl border border-border-glass p-5 rounded-xl flex flex-col gap-1 relative overflow-hidden group">
+                                    <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                                        <span className="material-symbols-outlined text-4xl">star</span>
+                                    </div>
+                                    <p className="text-[#ad90cb] text-sm font-medium">Cao nhất</p>
+                                    <div className="flex items-end gap-2">
+                                        <p className="text-white text-2xl font-bold">{stats.bestRate}%</p>
+                                    </div>
                                 </div>
                             </div>
-                        ) : selectedClassId ? (
-                            <div className="alert alert-warning">
-                                Chưa có buổi điểm danh nào cho lớp này
-                            </div>
-                        ) : null}
-                    </>
-                ) : (
-                    // GRADES HISTORY
-                    <>
-                        {loading ? (
-                            <div className="loading-container">
-                                <span className="spinner"></span>
-                                <p>Đang tải lịch sử điểm...</p>
-                            </div>
-                        ) : gradesHistory.length > 0 ? (
-                            <div style={{
-                                overflowX: 'auto',
-                                border: '2px solid var(--color-gray-100)',
-                                borderRadius: 'var(--radius-md)'
-                            }}>
-                                <table style={{
-                                    width: '100%',
-                                    borderCollapse: 'collapse',
-                                    fontSize: 'var(--font-size-sm)'
-                                }}>
-                                    <thead>
-                                        <tr style={{ background: 'var(--color-gray-100)' }}>
-                                            <th style={{
-                                                padding: 'var(--spacing-md)',
-                                                border: '1px solid var(--color-gray-200)',
-                                                textAlign: 'left',
-                                                fontWeight: '600'
-                                            }}>Thời gian</th>
-                                            <th style={{
-                                                padding: 'var(--spacing-md)',
-                                                border: '1px solid var(--color-gray-200)',
-                                                textAlign: 'left',
-                                                fontWeight: '600'
-                                            }}>Học kỳ</th>
-                                            <th style={{
-                                                padding: 'var(--spacing-md)',
-                                                border: '1px solid var(--color-gray-200)',
-                                                textAlign: 'left',
-                                                fontWeight: '600'
-                                            }}>Người sửa</th>
-                                            <th style={{
-                                                padding: 'var(--spacing-md)',
-                                                border: '1px solid var(--color-gray-200)',
-                                                textAlign: 'center',
-                                                fontWeight: '600',
-                                                width: '100px'
-                                            }}>Số TN</th>
-                                            <th style={{
-                                                padding: 'var(--spacing-md)',
-                                                border: '1px solid var(--color-gray-200)',
-                                                textAlign: 'center',
-                                                fontWeight: '600'
-                                            }}>Thay đổi</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {gradesHistory.map((entry, index) => (
-                                            <tr key={index} style={{
-                                                background: index % 2 === 0 ? 'white' : '#fafafa'
-                                            }}>
-                                                <td style={{
-                                                    padding: 'var(--spacing-md)',
-                                                    border: '1px solid var(--color-gray-200)'
-                                                }}>
-                                                    {new Date(entry.createdAt || entry.created_at).toLocaleString('vi-VN')}
-                                                </td>
-                                                <td style={{
-                                                    padding: 'var(--spacing-md)',
-                                                    border: '1px solid var(--color-gray-200)'
-                                                }}>{entry.semester || 'HK I'}</td>
-                                                <td style={{
-                                                    padding: 'var(--spacing-md)',
-                                                    border: '1px solid var(--color-gray-200)'
-                                                }}>{entry.editorName || entry.editor_name || 'Admin'}</td>
-                                                <td style={{
-                                                    padding: 'var(--spacing-md)',
-                                                    border: '1px solid var(--color-gray-200)',
-                                                    textAlign: 'center',
-                                                    fontWeight: '600'
-                                                }}>{entry.gradesCount || entry.grades_count || 0}</td>
-                                                <td style={{
-                                                    padding: 'var(--spacing-md)',
-                                                    border: '1px solid var(--color-gray-200)',
-                                                    textAlign: 'center'
-                                                }}>
-                                                    <div style={{ display: 'flex', gap: 'var(--spacing-sm)', justifyContent: 'center', flexWrap: 'wrap' }}>
-                                                        {entry.hasM && <span style={{
-                                                            padding: '2px 8px',
-                                                            background: '#e3f2fd',
-                                                            borderRadius: 'var(--radius-sm)',
-                                                            fontSize: '0.75rem',
-                                                            fontWeight: '600',
-                                                            color: '#1976d2'
-                                                        }}>M</span>}
-                                                        {entry.has1T && <span style={{
-                                                            padding: '2px 8px',
-                                                            background: '#fff3e0',
-                                                            borderRadius: 'var(--radius-sm)',
-                                                            fontSize: '0.75rem',
-                                                            fontWeight: '600',
-                                                            color: '#f57c00'
-                                                        }}>1T</span>}
-                                                        {entry.hasThi && <span style={{
-                                                            padding: '2px 8px',
-                                                            background: '#f3e5f5',
-                                                            borderRadius: 'var(--radius-sm)',
-                                                            fontSize: '0.75rem',
-                                                            fontWeight: '600',
-                                                            color: '#7b1fa2'
-                                                        }}>Thi</span>}
-                                                    </div>
-                                                </td>
-                                            </tr>
+                        )}
+                    </div>
+                </header>
+
+                <div className="p-4 md:p-8">
+                    <div className="max-w-[1200px] mx-auto flex flex-col gap-8">
+                        {/* Filter Bar */}
+                        <div className="bg-surface-glass backdrop-blur-xl border border-white/10 p-4 rounded-xl flex flex-wrap items-center gap-4 shadow-xl shadow-black/20">
+                            {/* Class Select */}
+                            <div className="w-full sm:w-64">
+                                <div className="relative">
+                                    <select
+                                        className="bg-[#362249]/50 backdrop-blur-lg border border-[#4d3168]/50 w-full pl-3 pr-10 py-2.5 rounded-lg text-white appearance-none focus:ring-2 focus:ring-primary focus:border-transparent outline-none text-sm cursor-pointer"
+                                        value={selectedClassId}
+                                        onChange={(e) => setSelectedClassId(e.target.value)}
+                                    >
+                                        <option className="bg-[#261834]" value="">-- Chọn lớp --</option>
+                                        {classes.map(cls => (
+                                            <option className="bg-[#261834]" key={cls.id} value={cls.id}>
+                                                {cls.name}
+                                            </option>
                                         ))}
-                                    </tbody>
-                                </table>
+                                    </select>
+                                    <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
+                                        <span className="material-symbols-outlined text-[#ad90cb]">expand_more</span>
+                                    </div>
+                                </div>
                             </div>
-                        ) : selectedClassId ? (
-                            <div className="alert alert-warning">
-                                Chưa có lịch sử điểm nào cho lớp này
+
+
+                        </div>
+
+                        {/* Error Message */}
+                        {error && (
+                            <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-200">
+                                {error}
                             </div>
-                        ) : null}
-                    </>
-                )}
+                        )}
+
+                        {/* Content */}
+                        {activeTab === 'attendance' ? (
+                            <div className="relative flex flex-col gap-8 pl-4">
+                                {/* Vertical Line */}
+                                <div className="absolute left-[19px] top-4 bottom-4 w-[2px] bg-gradient-to-b from-primary/50 via-[#4d3168] to-transparent"></div>
+
+                                {loading ? (
+                                    <div className="ml-14 text-[#ad90cb]">Đang tải...</div>
+                                ) : groupedSessions.length > 0 ? (
+                                    groupedSessions.map(group => (
+                                        <div key={group.date} className="flex flex-col gap-6">
+                                            <div className="flex items-center gap-4">
+                                                <div className="relative z-10 flex h-10 w-10 items-center justify-center rounded-full bg-[#261834] border-2 border-primary shadow-[0_0_10px_rgba(127,13,242,0.5)]">
+                                                    <span className="material-symbols-outlined text-white text-sm">today</span>
+                                                </div>
+                                                <h3 className="text-white font-bold text-lg">{formatDate(group.date, { weekday: 'long', day: 'numeric', month: 'long' })}</h3>
+                                            </div>
+
+                                            {group.items.map(session => (
+                                                <div
+                                                    key={session.id}
+                                                    className={`ml-14 bg-surface-glass backdrop-blur-xl border border-white/10 rounded-xl overflow-hidden shadow-lg transition-all ${selectedSession === session.id ? 'border-primary/50 ring-1 ring-primary/20' : 'hover:bg-white/5'}`}
+                                                >
+                                                    {/* Card Summary */}
+                                                    <div
+                                                        className="p-5 flex flex-wrap justify-between items-center gap-4 cursor-pointer"
+                                                        onClick={() => loadSessionDetails(session.id)}
+                                                    >
+                                                        <div className="flex gap-4 items-center">
+                                                            <div className={`h-12 w-12 rounded-lg flex items-center justify-center text-white font-bold text-xl shadow-inner ${session.attendanceMethod === 'qr' ? 'bg-gradient-to-br from-blue-600 to-purple-600' : 'bg-gradient-to-br from-pink-600 to-orange-500'}`}>
+                                                                {getSessionInitials(session.attendanceType)}
+                                                            </div>
+                                                            <div>
+                                                                <h4 className="text-white font-bold text-lg group-hover:text-primary transition-colors">{formatAttendanceType(session.attendanceType)}</h4>
+                                                                <div className="flex items-center gap-2 text-[#ad90cb] text-sm">
+                                                                    <span className="material-symbols-outlined text-[16px]">schedule</span>
+                                                                    {session.attendanceMethod === 'qr' ? 'Quét QR' : 'Thủ công'}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div className="flex items-center gap-6">
+                                                            {selectedSession === session.id && (
+                                                                <button
+                                                                    onClick={(e) => handleDeleteSession(session.id, e)}
+                                                                    className="text-red-400 hover:text-red-300 p-2 rounded-full hover:bg-red-500/10 transition-colors"
+                                                                    title="Xóa buổi này"
+                                                                >
+                                                                    <span className="material-symbols-outlined">delete</span>
+                                                                </button>
+                                                            )}
+                                                            <div className="flex flex-col items-end min-w-[80px]">
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className="text-white font-bold text-lg">{session.presentCount}/{session.totalCount}</span>
+                                                                </div>
+                                                                <span className="text-xs text-[#0bda73] font-medium">
+                                                                    {session.totalCount ? Math.round(session.presentCount / session.totalCount * 100) : 0}% Có mặt
+                                                                </span>
+                                                            </div>
+                                                            <button className={`h-8 w-8 rounded-full bg-white/10 flex items-center justify-center transition-colors transform ${selectedSession === session.id ? 'rotate-180' : ''}`}>
+                                                                <span className="material-symbols-outlined text-white">expand_more</span>
+                                                            </button>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Expanded Details */}
+                                                    {selectedSession === session.id && (
+                                                        <div className="bg-black/20 border-t border-white/5 animate-fade-in-up">
+                                                            {loadingDetails ? (
+                                                                <div className="p-8 text-center text-[#ad90cb]">Đang tải chi tiết...</div>
+                                                            ) : sessionDetails ? (
+                                                                <div className="p-5">
+                                                                    <div className="flex justify-between items-center mb-4">
+                                                                        <p className="text-sm text-[#ad90cb] font-medium">Danh sách ({sessionDetails.records.length})</p>
+                                                                        <div className="flex gap-2">
+                                                                            <button
+                                                                                onClick={() => handleBulkUpdate(false)}
+                                                                                className="text-xs bg-red-500/10 text-red-400 px-3 py-1.5 rounded-lg hover:bg-red-500/20 transition-colors border border-red-500/20"
+                                                                            >
+                                                                                Vắng hết
+                                                                            </button>
+                                                                            <button
+                                                                                onClick={() => handleBulkUpdate(true)}
+                                                                                className="text-xs bg-green-500/10 text-green-400 px-3 py-1.5 rounded-lg hover:bg-green-500/20 transition-colors border border-green-500/20"
+                                                                            >
+                                                                                Có hết
+                                                                            </button>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                                                                        {sessionDetails.records.map(record => (
+                                                                            <div
+                                                                                key={record.id}
+                                                                                className="flex items-center gap-2 p-2 rounded-lg bg-[#261834] border border-white/5 cursor-pointer hover:bg-white/5 transition-colors group"
+                                                                                onClick={(e) => {
+                                                                                    e.stopPropagation();
+                                                                                    // Toggle status
+                                                                                    handleUpdateStudentStatus(session.id, record.studentId, !record.isPresent, record.fullName);
+                                                                                }}
+                                                                            >
+                                                                                <div className={`h-8 w-8 rounded-full flex items-center justify-center text-xs font-bold text-white ${record.isPresent ? 'bg-green-500/20 text-green-400 border border-green-500/30' : 'bg-red-500/20 text-red-400 border border-red-500/30'}`}>
+                                                                                    {record.fullName.substring(0, 1)}
+                                                                                </div>
+                                                                                <div className="flex flex-col min-w-0">
+                                                                                    <span className="text-white text-xs font-medium truncate">{record.fullName}</span>
+                                                                                    <span className={`text-[10px] font-bold ${record.isPresent ? 'text-green-400' : 'text-red-400'}`}>
+                                                                                        {record.isPresent ? 'Có mặt' : 'Vắng'}
+                                                                                    </span>
+                                                                                </div>
+                                                                            </div>
+                                                                        ))}
+                                                                    </div>
+                                                                </div>
+                                                            ) : null}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ))
+                                ) : selectedClassId ? (
+                                    <div className="ml-14 p-8 rounded-xl bg-surface-glass border border-white/10 text-center">
+                                        <p className="text-[#ad90cb]">Chưa có dữ liệu điểm danh nào.</p>
+                                    </div>
+                                ) : (
+                                    <div className="ml-14 p-8 rounded-xl bg-surface-glass border border-white/10 text-center">
+                                        <p className="text-[#ad90cb]">Vui lòng chọn một lớp để xem lịch sử.</p>
+                                    </div>
+                                )}
+                            </div>
+                        ) : (
+                            // Grades Tab
+                            <div className="bg-surface-glass backdrop-blur-xl border border-white/10 p-5 rounded-xl overflow-x-auto">
+                                {loading ? (
+                                    <div className="text-center text-[#ad90cb] p-4">Đang tải lịch sử điểm...</div>
+                                ) : gradesHistory.length > 0 ? (
+                                    <table className="w-full text-left text-sm text-[#ad90cb]">
+                                        <thead className="text-xs uppercase bg-white/5 text-white">
+                                            <tr>
+                                                <th className="px-6 py-3 rounded-tl-lg">Thời gian</th>
+                                                <th className="px-6 py-3">Học kỳ</th>
+                                                <th className="px-6 py-3">Người sửa</th>
+                                                <th className="px-6 py-3 text-center">Số TN</th>
+                                                <th className="px-6 py-3 rounded-tr-lg text-center">Thay đổi</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {gradesHistory.map((entry, index) => (
+                                                <tr key={index} className="border-b border-white/5 hover:bg-white/5 transition-colors">
+                                                    <td className="px-6 py-4 font-medium text-white">
+                                                        {new Date(entry.createdAt || entry.created_at).toLocaleString('vi-VN')}
+                                                    </td>
+                                                    <td className="px-6 py-4">{entry.semester || 'HK I'}</td>
+                                                    <td className="px-6 py-4">{entry.editorName || entry.editor_name || 'Admin'}</td>
+                                                    <td className="px-6 py-4 text-center">{entry.gradesCount || entry.grades_count || 0}</td>
+                                                    <td className="px-6 py-4 text-center">
+                                                        <div className="flex gap-2 justify-center">
+                                                            {entry.hasM && <span className="bg-blue-500/20 text-blue-300 px-2 py-0.5 rounded text-xs font-bold border border-blue-500/30">M</span>}
+                                                            {entry.has1T && <span className="bg-orange-500/20 text-orange-300 px-2 py-0.5 rounded text-xs font-bold border border-orange-500/30">1T</span>}
+                                                            {entry.hasThi && <span className="bg-purple-500/20 text-purple-300 px-2 py-0.5 rounded text-xs font-bold border border-purple-500/30">Thi</span>}
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                ) : (
+                                    <div className="text-center text-[#ad90cb] p-8">
+                                        {selectedClassId ? 'Chưa có lịch sử điểm nào.' : 'Vui lòng chọn lớp.'}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                </div>
             </div>
         </div>
     );

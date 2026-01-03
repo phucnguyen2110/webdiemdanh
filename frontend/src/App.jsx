@@ -26,31 +26,33 @@ function App() {
                     {/* Protected routes */}
                     <Route path="/*" element={
                         <ProtectedRoute>
-                            <div style={{ minHeight: '100vh' }}>
+                            <div className="main-layout">
                                 <Navigation />
-                                <OfflineStatus />
-                                <OfflineFirstTimeGuide />
-                                <Routes>
-                                    <Route path="/" element={<UploadPage />} />
-                                    <Route path="/files" element={<FilesPage />} />
-                                    <Route path="/excel-viewer" element={<ExcelViewerPage />} />
-                                    <Route path="/attendance" element={<AttendancePage />} />
-                                    <Route path="/grades" element={<GradesPage />} />
-                                    <Route path="/qr-scanner" element={<QRScannerPage />} />
-                                    <Route path="/history" element={<HistoryPage />} />
+                                <div className="content-wrapper custom-scrollbar" style={{ overflowY: 'auto' }}>
+                                    <OfflineStatus />
+                                    <OfflineFirstTimeGuide />
+                                    <Routes>
+                                        <Route path="/" element={<UploadPage />} />
+                                        <Route path="/files" element={<FilesPage />} />
+                                        <Route path="/excel-viewer" element={<ExcelViewerPage />} />
+                                        <Route path="/attendance" element={<AttendancePage />} />
+                                        <Route path="/grades" element={<GradesPage />} />
+                                        <Route path="/qr-scanner" element={<QRScannerPage />} />
+                                        <Route path="/history" element={<HistoryPage />} />
 
-                                    {/* Admin-only routes */}
-                                    <Route path="/admin" element={
-                                        <ProtectedRoute adminOnly>
-                                            <AdminPage />
-                                        </ProtectedRoute>
-                                    } />
-                                    <Route path="/sync-monitor" element={
-                                        <ProtectedRoute adminOnly>
-                                            <SyncMonitorPage />
-                                        </ProtectedRoute>
-                                    } />
-                                </Routes>
+                                        {/* Admin-only routes */}
+                                        <Route path="/admin" element={
+                                            <ProtectedRoute adminOnly>
+                                                <AdminPage />
+                                            </ProtectedRoute>
+                                        } />
+                                        <Route path="/sync-monitor" element={
+                                            <ProtectedRoute adminOnly>
+                                                <SyncMonitorPage />
+                                            </ProtectedRoute>
+                                        } />
+                                    </Routes>
+                                </div>
                             </div>
                         </ProtectedRoute>
                     } />

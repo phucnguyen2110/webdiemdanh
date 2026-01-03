@@ -209,7 +209,10 @@ export const attendanceAPI = {
     deleteSession: (sessionId) => api.delete(`/attendance/session/${sessionId}`),
 
     // Xóa điểm danh của từng thiếu nhi trong buổi
-    deleteStudentAttendance: (sessionId, studentId) => api.delete(`/attendance/session/${sessionId}/student/${studentId}`)
+    deleteStudentAttendance: (sessionId, studentId) => api.delete(`/attendance/session/${sessionId}/student/${studentId}`),
+
+    // Cập nhật trạng thái điểm danh của một học sinh
+    updateStudentStatus: (sessionId, studentId, isPresent) => api.put(`/attendance/session/${sessionId}/student/${studentId}`, { isPresent })
 };
 
 /**

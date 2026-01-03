@@ -1,13 +1,16 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import './LoginPage.css';
 
 export default function LoginPage() {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
+    const [isPasswordVisible, setIsPasswordVisible] = useState(false);
     const [rememberMe, setRememberMe] = useState(false);
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
+
     const { login } = useAuth();
     const navigate = useNavigate();
 
@@ -61,137 +64,133 @@ export default function LoginPage() {
     };
 
     return (
-        <div style={{
-            minHeight: '100vh',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            background: 'linear-gradient(135deg, var(--color-gray-50) 0%, var(--color-primary-light) 100%)',
-            padding: 'var(--spacing-md)'
-        }}>
-            <div className="card" style={{
-                width: '100%',
-                maxWidth: '400px',
-                padding: 'clamp(var(--spacing-lg), 5vw, var(--spacing-2xl))'
-            }}>
-                <div style={{ textAlign: 'center', marginBottom: 'var(--spacing-xl)' }}>
-                    <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: 'var(--spacing-sm)',
-                        marginBottom: 'var(--spacing-sm)'
-                    }}>
-                        <h1 style={{
-                            fontSize: 'clamp(var(--font-size-2xl), 6vw, var(--font-size-3xl))',
-                            margin: 0,
-                            background: 'linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%)',
-                            WebkitBackgroundClip: 'text',
-                            WebkitTextFillColor: 'transparent'
-                        }}>
-                            Quản Lý Thiếu Nhi
-                        </h1>
+        <div className="login-page-wrapper">
+            {/* Background Elements */}
+            <div className="login-bg-gradient"></div>
+            <div className="login-bg-pattern"></div>
+            <div className="login-orb login-orb-1"></div>
+            <div className="login-orb login-orb-2"></div>
+
+            {/* Glass Card */}
+            <div className="login-card">
+                <div className="login-card-line"></div>
+
+                {/* Header */}
+                <div className="login-header">
+                    <div className="login-icon-box">
+                        <span className="material-symbols-outlined" style={{ fontSize: '48px', color: 'white' }}>
+                            school
+                        </span>
                     </div>
-                    <p style={{
-                        color: 'var(--color-gray-400)',
-                        fontSize: 'clamp(var(--font-size-xs), 3vw, var(--font-size-sm))'
-                    }}>
-                        Đăng nhập để tiếp tục
-                    </p>
+                    <h1 className="login-title">Quản Lý Thiếu Nhi</h1>
+                    <p className="login-subtitle">Đăng nhập để tiếp tục quản lý</p>
                 </div>
 
+                {/* Form */}
                 <form onSubmit={handleSubmit}>
-                    <div className="form-group">
-                        <label className="form-label" htmlFor="username">
-                            Tên đăng nhập
-                        </label>
-                        <input
-                            id="username"
-                            type="text"
-                            className="form-input"
-                            value={username}
-                            onChange={(e) => setUsername(e.target.value)}
-                            required
-                            autoFocus
-                            placeholder="Nhập tên đăng nhập"
-                            style={{
-                                fontSize: 'clamp(var(--font-size-sm), 3.5vw, var(--font-size-base))'
-                            }}
-                        />
+                    {/* Username */}
+                    <div className="login-form-group">
+                        <label className="login-label" htmlFor="username">Username</label>
+                        <div className="login-input-wrapper">
+                            <div className="login-input-icon">
+                                <span className="material-symbols-outlined">person</span>
+                            </div>
+                            <input
+                                id="username"
+                                type="text"
+                                className="login-input"
+                                placeholder="Nhập tên đăng nhập"
+                                value={username}
+                                onChange={(e) => setUsername(e.target.value)}
+                                autoFocus
+                                required
+                            />
+                        </div>
                     </div>
 
-                    <div className="form-group">
-                        <label className="form-label" htmlFor="password">
-                            Mật khẩu
-                        </label>
-                        <input
-                            id="password"
-                            type="password"
-                            className="form-input"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            required
-                            placeholder="Nhập mật khẩu"
-                            style={{
-                                fontSize: 'clamp(var(--font-size-sm), 3.5vw, var(--font-size-base))'
-                            }}
-                        />
+                    {/* Password */}
+                    <div className="login-form-group">
+                        <label className="login-label" htmlFor="password">Password</label>
+                        <div className="login-input-wrapper">
+                            <div className="login-input-icon">
+                                <span className="material-symbols-outlined">lock</span>
+                            </div>
+                            <input
+                                id="password"
+                                type={isPasswordVisible ? "text" : "password"}
+                                className="login-input"
+                                placeholder="Nhập mật khẩu"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                required
+                            />
+                            <button
+                                type="button"
+                                className="login-input-action"
+                                onClick={() => setIsPasswordVisible(!isPasswordVisible)}
+                                tabIndex="-1"
+                            >
+                                <span className="material-symbols-outlined">
+                                    {isPasswordVisible ? 'visibility_off' : 'visibility'}
+                                </span>
+                            </button>
+                        </div>
                     </div>
 
-                    <div className="form-group" style={{ marginBottom: 'var(--spacing-lg)' }}>
-                        <div className="checkbox-group">
+                    {/* Options */}
+                    <div className="login-options">
+                        <label className="login-toggle">
                             <input
                                 type="checkbox"
-                                id="rememberMe"
-                                className="checkbox-input"
+                                className="login-toggle-input"
                                 checked={rememberMe}
                                 onChange={handleRememberMeChange}
                             />
-                            <label
-                                htmlFor="rememberMe"
-                                className="checkbox-label"
-                                style={{
-                                    fontSize: 'clamp(var(--font-size-xs), 3.5vw, var(--font-size-sm))'
-                                }}
-                            >
-                                💾 Nhớ tài khoản
-                            </label>
-                        </div>
-                        <p style={{
-                            fontSize: 'clamp(10px, 2.5vw, var(--font-size-xs))',
-                            color: 'var(--color-gray-400)',
-                            marginTop: 'var(--spacing-xs)',
-                            marginLeft: 'clamp(var(--spacing-lg), 5vw, var(--spacing-xl))'
-                        }}>
-                            Tài khoản sẽ được lưu trên thiết bị này
-                        </p>
+                            <div className="login-toggle-track">
+                                <div className="login-toggle-thumb"></div>
+                            </div>
+                            <span className="login-toggle-label">Nhớ tài khoản</span>
+                        </label>
                     </div>
 
+                    {/* Error Message */}
                     {error && (
-                        <div
-                            className="alert alert-danger"
-                            style={{
-                                marginBottom: 'var(--spacing-lg)',
-                                fontSize: 'clamp(var(--font-size-xs), 3vw, var(--font-size-sm))'
-                            }}
-                        >
+                        <div className="login-alert login-alert-error" style={{ marginTop: '1.5rem', marginBottom: '0' }}>
                             {error}
                         </div>
                     )}
 
+                    {/* Submit Button */}
                     <button
                         type="submit"
-                        className="btn btn-primary"
+                        className="login-btn"
                         disabled={loading}
-                        style={{
-                            width: '100%',
-                            fontSize: 'clamp(var(--font-size-sm), 3.5vw, var(--font-size-base))',
-                            padding: 'clamp(var(--spacing-sm), 3vw, var(--spacing-md)) var(--spacing-lg)'
-                        }}
                     >
                         {loading ? 'Đang đăng nhập...' : 'Đăng nhập'}
                     </button>
                 </form>
+
+                {/* Footer */}
+                <div className="login-footer">
+                    <p>
+                        Chưa có tài khoản?{' '}
+                        <a href="https://zalo.me/0708216986" target="_blank" rel="noopener noreferrer" className="login-link">Liên hệ Admin</a>
+                    </p>
+                </div>
+            </div>
+
+            {/* Version / Branding */}
+            <div style={{
+                position: 'fixed',
+                bottom: '1rem',
+                textAlign: 'center',
+                width: '100%',
+                opacity: 0.5,
+                fontSize: '0.75rem',
+                color: 'var(--login-text-muted)',
+                pointerEvents: 'none'
+            }}>
+                Xứ Đoàn Giáo Hoàng Phao-lô VI - Giáo xứ Chợ Cầu
             </div>
         </div>
     );
