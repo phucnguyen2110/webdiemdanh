@@ -257,7 +257,7 @@ export default function AttendancePage() {
     };
 
     return (
-        <div className="flex h-full w-full flex-col relative overflow-hidden bg-[#191022] text-slate-100 font-sans dark">
+        <div className="flex h-full w-full flex-col relative overflow-hidden mesh-gradient text-gray-900 font-sans">
             {/* Ambient Background Blobs */}
             <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none">
                 <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-[#7f0df2]/10 blur-[100px]"></div>
@@ -270,10 +270,10 @@ export default function AttendancePage() {
                     {/* Top Row: Title & Actions */}
                     <div className="flex flex-wrap justify-between items-center gap-4">
                         <div>
-                            <h2 className="text-2xl md:text-3xl font-black tracking-tight text-white">
+                            <h2 className="text-2xl md:text-3xl font-black tracking-tight text-gray-900">
                                 Điểm Danh Thiếu Nhi
                             </h2>
-                            <p className="text-slate-400 font-medium mt-1 flex items-center gap-2 text-sm md:text-base">
+                            <p className="text-gray-600 font-medium mt-1 flex items-center gap-2 text-sm md:text-base">
                                 <span className="material-symbols-outlined text-lg">calendar_today</span>
                                 {attendanceDate ? formatVietnameseDate(attendanceDate) : 'Chọn ngày'}
                                 {selectedClassId && (
@@ -308,25 +308,25 @@ export default function AttendancePage() {
                     </div>
 
                     {/* Filter Controls Row (Glassmorphic Container) */}
-                    <div className="bg-[#191022]/60 backdrop-blur-xl border border-white/10 rounded-2xl p-4 flex flex-wrap items-end gap-4 shadow-sm z-20">
+                    <div className="glass-card rounded-2xl p-4 flex flex-wrap items-end gap-4 z-20">
                         {/* Class Select */}
                         <div className="flex-1 min-w-[200px]">
-                            <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5 ml-1">Lớp Học</label>
+                            <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5 ml-1">Lớp Học</label>
                             <div className="relative group">
                                 <select
-                                    className="w-full h-11 pl-4 pr-10 rounded-xl bg-white/5 border border-white/10 text-white text-sm font-medium focus:ring-2 focus:ring-[#7f0df2]/50 focus:border-[#7f0df2] transition-all appearance-none cursor-pointer hover:bg-white/10 outline-none"
+                                    className="w-full h-11 pl-4 pr-10 rounded-xl bg-white border border-gray-200 text-gray-900 text-sm font-medium focus:ring-2 focus:ring-[#7f0df2]/50 focus:border-[#7f0df2] transition-all appearance-none cursor-pointer hover:bg-gray-50 outline-none"
                                     value={selectedClassId}
                                     onChange={(e) => setSelectedClassId(e.target.value)}
                                     disabled={loading}
                                 >
-                                    <option value="">-- Chọn lớp --</option>
+                                    <option value="" className="text-gray-900 bg-white">-- Chọn lớp --</option>
                                     {classes.map(cls => (
-                                        <option key={cls.id} value={cls.id}>
+                                        <option key={cls.id} value={cls.id} className="text-gray-900 bg-white">
                                             {cls.name} ({cls.studentsCount} thiếu nhi)
                                         </option>
                                     ))}
                                 </select>
-                                <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500">
+                                <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
                                     <span className="material-symbols-outlined">expand_more</span>
                                 </div>
                             </div>
@@ -334,16 +334,17 @@ export default function AttendancePage() {
 
                         {/* Date Picker */}
                         <div className="flex-1 min-w-[150px]">
-                            <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5 ml-1">Ngày</label>
+                            <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5 ml-1">Ngày</label>
                             <div className="relative group">
                                 <input
                                     type="date"
-                                    className="w-full h-11 pl-10 pr-4 rounded-xl bg-white/5 border border-white/10 text-white text-sm font-medium focus:ring-2 focus:ring-[#7f0df2]/50 focus:border-[#7f0df2] transition-all cursor-pointer hover:bg-white/10 outline-none"
+                                    style={{ colorScheme: 'light' }}
+                                    className="w-full h-11 pl-10 pr-4 rounded-xl bg-white border border-gray-200 text-gray-900 text-sm font-medium focus:ring-2 focus:ring-[#7f0df2]/50 focus:border-[#7f0df2] transition-all cursor-pointer hover:bg-gray-50 outline-none"
                                     value={attendanceDate}
                                     onChange={(e) => setAttendanceDate(e.target.value)}
                                     disabled={loading}
                                 />
-                                <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500">
+                                <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
                                     <span className="material-symbols-outlined text-[20px]">event</span>
                                 </div>
                             </div>
@@ -351,19 +352,19 @@ export default function AttendancePage() {
 
                         {/* Session Select (Attendance Type) */}
                         <div className="flex-1 min-w-[200px]">
-                            <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5 ml-1">Loại Điểm Danh</label>
+                            <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5 ml-1">Loại Điểm Danh</label>
                             <div className="relative group">
                                 <select
-                                    className="w-full h-11 pl-4 pr-10 rounded-xl bg-white/5 border border-white/10 text-white text-sm font-medium focus:ring-2 focus:ring-[#7f0df2]/50 focus:border-[#7f0df2] transition-all appearance-none cursor-pointer hover:bg-white/10 outline-none"
+                                    className="w-full h-11 pl-4 pr-10 rounded-xl bg-white border border-gray-200 text-gray-900 text-sm font-medium focus:ring-2 focus:ring-[#7f0df2]/50 focus:border-[#7f0df2] transition-all appearance-none cursor-pointer hover:bg-gray-50 outline-none"
                                     value={attendanceType}
                                     onChange={(e) => setAttendanceType(e.target.value)}
                                     disabled={loading || allowedTypes.length === 0}
                                 >
                                     {allowedTypes.map(type => (
-                                        <option key={type} value={type}>{type}</option>
+                                        <option key={type} value={type} className="text-gray-900 bg-white">{type}</option>
                                     ))}
                                     {allowedTypes.length === 0 && (
-                                        <option value="">-- Ngày không hợp lệ --</option>
+                                        <option value="" className="text-gray-900 bg-white">-- Ngày không hợp lệ --</option>
                                     )}
                                 </select>
                                 <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500">
@@ -393,20 +394,20 @@ export default function AttendancePage() {
                 )}
 
                 {loadingStudents ? (
-                    <div className="flex flex-col items-center justify-center py-20 text-slate-400 col-span-full">
+                    <div className="flex flex-col items-center justify-center py-20 text-gray-600 col-span-full">
                         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#7f0df2] mb-4"></div>
                         <p>Đang tải danh sách...</p>
                     </div>
                 ) : students.length > 0 ? (
                     students.map((student) => (
-                        <div key={student.id} className="bg-[#191022]/60 backdrop-blur-xl border border-white/10 rounded-2xl p-4 flex flex-col items-center gap-4 group hover:bg-white/10 transition-all duration-300">
+                        <div key={student.id} className="glass-card rounded-2xl p-4 flex flex-col items-center gap-4 group hover:shadow-lg transition-all duration-300">
                             {/* Student Info */}
                             <div className="flex items-center gap-4 w-full">
-                                <div className="size-12 rounded-full bg-[#7f0df2]/10 flex items-center justify-center shrink-0 border-2 border-white/20 shadow-sm text-[#7f0df2] font-bold text-lg">
+                                <div className="size-12 rounded-full bg-primary/10 flex items-center justify-center shrink-0 border-2 border-primary/20 shadow-sm text-primary font-bold text-lg">
                                     {getInitials(student.fullName)}
                                 </div>
                                 <div className="flex flex-col">
-                                    <h3 className="text-base font-bold text-white group-hover:text-[#7f0df2] transition-colors">
+                                    <h3 className="text-base font-bold text-gray-900 group-hover:text-primary transition-colors">
                                         {student.stt}. {student.baptismalName} {student.fullName}
                                     </h3>
                                     {/* <span className="text-xs font-medium text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-700/50 px-2 py-0.5 rounded-full w-fit">
@@ -417,7 +418,7 @@ export default function AttendancePage() {
 
                             {/* Status Controls */}
                             <div className="flex items-center justify-between w-full gap-4">
-                                <div className="flex items-center p-1 bg-white/5 rounded-xl border border-white/10 w-full justify-center">
+                                <div className="flex items-center p-1 bg-gray-50 rounded-xl border border-gray-200 w-full justify-center">
                                     <label className="cursor-pointer flex-1">
                                         <input
                                             type="radio"
@@ -426,7 +427,7 @@ export default function AttendancePage() {
                                             checked={!!checkedStudents[student.id]}
                                             onChange={() => setStudentStatus(student.id, true)}
                                         />
-                                        <div className={`px-4 py-2 rounded-lg text-sm font-bold transition-all flex items-center justify-center gap-2 ${checkedStudents[student.id] ? 'bg-[#7f0df2] text-white shadow-md' : 'text-gray-400 hover:bg-white/10'}`}>
+                                        <div className={`px-4 py-2 rounded-lg text-sm font-bold transition-all flex items-center justify-center gap-2 ${checkedStudents[student.id] ? 'bg-green-600 text-white shadow-md' : 'text-gray-600 hover:bg-gray-100'}`}>
                                             <span className="material-symbols-outlined text-[18px] hidden sm:block">check</span>
                                             Có mặt
                                         </div>
@@ -439,7 +440,7 @@ export default function AttendancePage() {
                                             checked={!checkedStudents[student.id]}
                                             onChange={() => setStudentStatus(student.id, false)}
                                         />
-                                        <div className={`px-4 py-2 rounded-lg text-sm font-bold transition-all flex items-center justify-center gap-2 ${!checkedStudents[student.id] ? 'bg-rose-500 text-white shadow-md' : 'text-gray-400 hover:bg-white/10'}`}>
+                                        <div className={`px-4 py-2 rounded-lg text-sm font-bold transition-all flex items-center justify-center gap-2 ${!checkedStudents[student.id] ? 'bg-red-600 text-white shadow-md' : 'text-gray-600 hover:bg-gray-100'}`}>
                                             <span className="material-symbols-outlined text-[18px] hidden sm:block">close</span>
                                             Vắng
                                         </div>
@@ -454,7 +455,7 @@ export default function AttendancePage() {
                         <p>Không có thiếu nhi trong lớp này</p>
                     </div>
                 ) : (
-                    <div className="flex flex-col items-center justify-center py-20 text-slate-400 opacity-60 col-span-full">
+                    <div className="flex flex-col items-center justify-center py-20 text-gray-600 opacity-60 col-span-full">
                         <span className="material-symbols-outlined text-6xl mb-4">arrow_upward</span>
                         <p>Chọn lớp để bắt đầu điểm danh</p>
                     </div>
@@ -462,18 +463,18 @@ export default function AttendancePage() {
             </div>
 
             {/* Sticky Bottom Bar */}
-            <div className={`absolute bottom-0 w-full bg-[#191022]/80 backdrop-blur-xl border-t border-white/10 px-4 md:px-6 py-4 flex flex-col md:flex-row items-center justify-between gap-4 z-20 shadow-[0_-4px_20px_rgba(0,0,0,0.2)] transition-transform duration-300 ${students.length > 0 ? 'translate-y-0' : 'translate-y-full'}`}>
+            <div className={`absolute bottom-0 w-full glass-card border-t border-gray-200 px-4 md:px-6 py-4 flex flex-col md:flex-row items-center justify-between gap-4 z-20 shadow-[0_-4px_20px_rgba(0,0,0,0.1)] transition-transform duration-300 ${students.length > 0 ? 'translate-y-0' : 'translate-y-full'}`}>
                 <div className="flex gap-4 md:gap-6 text-sm font-medium w-full md:w-auto justify-center md:justify-start">
-                    <div className="flex items-center gap-2 text-white">
-                        <span className="size-2 rounded-full bg-slate-400"></span>
+                    <div className="flex items-center gap-2 text-gray-700">
+                        <span className="size-2 rounded-full bg-gray-400"></span>
                         <span>Tổng: <span className="font-bold">{students.length}</span></span>
                     </div>
-                    <div className="flex items-center gap-2 text-[#7f0df2]">
-                        <span className="size-2 rounded-full bg-[#7f0df2]"></span>
+                    <div className="flex items-center gap-2 text-green-600">
+                        <span className="size-2 rounded-full bg-green-600"></span>
                         <span>Có mặt: <span className="font-bold">{presentCount}</span></span>
                     </div>
-                    <div className="flex items-center gap-2 text-rose-500">
-                        <span className="size-2 rounded-full bg-rose-500"></span>
+                    <div className="flex items-center gap-2 text-red-600">
+                        <span className="size-2 rounded-full bg-red-600"></span>
                         <span>Vắng: <span className="font-bold">{students.length - presentCount}</span></span>
                     </div>
                 </div>

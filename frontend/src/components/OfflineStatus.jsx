@@ -82,7 +82,9 @@ export default function OfflineStatus() {
             right: '20px',
             zIndex: 1000,
             maxWidth: '350px'
-        }}>
+        }}
+            className="offline-status-container"
+        >
             {/* Main Status Card */}
             <div
                 style={{

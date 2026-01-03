@@ -259,83 +259,100 @@ export default function HistoryPage() {
     };
 
     return (
-        <div className="flex flex-col h-screen w-full bg-background-dark text-white font-display overflow-hidden">
+        <div className="flex flex-col h-screen w-full mesh-gradient text-gray-900 font-display overflow-hidden">
             {/* Scrollable Content */}
             <div className="flex-1 overflow-y-auto scroll-smooth">
                 {/* Header Section */}
-                <header className="flex-none px-4 md:px-8 py-6 border-b border-border-glass bg-[#191022]/50 backdrop-blur-sm z-10">
-                    <div className="max-w-[1200px] mx-auto flex flex-col gap-6">
-                        {/* Title Row */}
-                        <div className="flex flex-wrap justify-between items-end gap-4">
-                            <div className="flex flex-col gap-1">
-                                <h2 className="text-white text-3xl font-black tracking-tight">Lịch Sử Điểm Danh</h2>
-                                <p className="text-[#ad90cb] text-sm font-normal">Xem lại lịch sử điểm danh.</p>
-                            </div>
-                            <button
-                                onClick={handleExport}
-                                disabled={!selectedClassId || exporting}
-                                className={`bg-primary hover:bg-primary-hover text-white px-5 py-2.5 rounded-lg text-sm font-semibold flex items-center gap-2 transition-all shadow-lg shadow-primary/20 ${(!selectedClassId || exporting) ? 'opacity-50 cursor-not-allowed' : ''}`}
-                            >
-                                <span className="material-symbols-outlined text-[20px]">download</span>
-                                {exporting ? 'Đang xuất...' : 'Xuất Excel'}
-                            </button>
+                <header className="flex-none px-4 md:px-8 py-6 md:py-8 border-b border-gray-200 glass-card z-10 flex flex-col gap-6">
+                    {/* Title Row */}
+                    <div className="flex flex-wrap justify-between items-end gap-4">
+                        <div className="flex flex-col gap-1">
+                            <h2 className="text-gray-900 text-2xl md:text-3xl font-black tracking-tight">Lịch Sử Điểm Danh</h2>
+                            <p className="text-gray-600 text-sm font-medium">Xem lại và quản lý lịch sử điểm danh</p>
                         </div>
-                        {/* Stats Widgets - Only show if class selected and sessions available */}
-                        {selectedClassId && activeTab === 'attendance' && (
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <div className="bg-surface-glass backdrop-blur-xl border border-border-glass p-5 rounded-xl flex flex-col gap-1 relative overflow-hidden group">
-                                    <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                                        <span className="material-symbols-outlined text-4xl">calendar_month</span>
+                        <button
+                            onClick={handleExport}
+                            disabled={!selectedClassId || exporting}
+                            className={`bg-primary hover:bg-primary-dark text-white px-6 py-3 rounded-xl text-sm font-bold flex items-center gap-2 transition-all shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/40 hover:-translate-y-0.5 ${(!selectedClassId || exporting) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        >
+                            <span className="material-symbols-outlined text-[20px]">download</span>
+                            {exporting ? 'Đang xuất...' : 'Xuất Excel'}
+                        </button>
+                    </div>
+                    {/* Stats Widgets - Only show if class selected and sessions available */}
+                    {selectedClassId && activeTab === 'attendance' && (
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div className="glass-card rounded-2xl p-6 flex flex-col gap-2 relative overflow-hidden group hover:shadow-lg transition-all">
+                                <div className="absolute -top-4 -right-4 w-24 h-24 bg-gradient-to-br from-primary/10 to-transparent rounded-full blur-2xl group-hover:from-primary/20 transition-all"></div>
+                                <div className="flex items-center justify-between mb-1">
+                                    <div className="p-2.5 bg-indigo-50 rounded-lg">
+                                        <span className="material-symbols-outlined text-indigo-600 text-xl">calendar_month</span>
                                     </div>
-                                    <p className="text-[#ad90cb] text-sm font-medium">Trung bình tháng</p>
-                                    <div className="flex items-end gap-2">
-                                        <p className="text-white text-2xl font-bold">{stats.monthlyAvg}%</p>
-                                    </div>
+                                    <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Tháng này</span>
                                 </div>
-                                <div className="bg-surface-glass backdrop-blur-xl border border-border-glass p-5 rounded-xl flex flex-col gap-1 relative overflow-hidden group">
-                                    <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                                        <span className="material-symbols-outlined text-4xl">groups</span>
-                                    </div>
-                                    <p className="text-[#ad90cb] text-sm font-medium">Tổng buổi</p>
-                                    <div className="flex items-end gap-2">
-                                        <p className="text-white text-2xl font-bold">{stats.total}</p>
-                                    </div>
-                                </div>
-                                <div className="bg-surface-glass backdrop-blur-xl border border-border-glass p-5 rounded-xl flex flex-col gap-1 relative overflow-hidden group">
-                                    <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                                        <span className="material-symbols-outlined text-4xl">star</span>
-                                    </div>
-                                    <p className="text-[#ad90cb] text-sm font-medium">Cao nhất</p>
-                                    <div className="flex items-end gap-2">
-                                        <p className="text-white text-2xl font-bold">{stats.bestRate}%</p>
+                                <p className="text-gray-600 text-sm font-semibold">Trung bình tháng</p>
+                                <div className="flex items-end gap-2">
+                                    <p className="text-gray-900 text-3xl font-black">{stats.monthlyAvg}%</p>
+                                    <div className="mb-1.5 px-2 py-0.5 bg-green-100 text-green-700 text-xs font-bold rounded-md">
+                                        +5%
                                     </div>
                                 </div>
                             </div>
-                        )}
-                    </div>
+                            <div className="glass-card rounded-2xl p-6 flex flex-col gap-2 relative overflow-hidden group hover:shadow-lg transition-all">
+                                <div className="absolute -top-4 -right-4 w-24 h-24 bg-gradient-to-br from-purple-500/10 to-transparent rounded-full blur-2xl group-hover:from-purple-500/20 transition-all"></div>
+                                <div className="flex items-center justify-between mb-1">
+                                    <div className="p-2.5 bg-purple-50 rounded-lg">
+                                        <span className="material-symbols-outlined text-purple-600 text-xl">event_note</span>
+                                    </div>
+                                    <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Tổng cộng</span>
+                                </div>
+                                <p className="text-gray-600 text-sm font-semibold">Tổng buổi</p>
+                                <div className="flex items-end gap-2">
+                                    <p className="text-gray-900 text-3xl font-black">{stats.total}</p>
+                                    <span className="text-xs text-gray-500 mb-1.5">buổi</span>
+                                </div>
+                            </div>
+                            <div className="glass-card rounded-2xl p-6 flex flex-col gap-2 relative overflow-hidden group hover:shadow-lg transition-all">
+                                <div className="absolute -top-4 -right-4 w-24 h-24 bg-gradient-to-br from-amber-500/10 to-transparent rounded-full blur-2xl group-hover:from-amber-500/20 transition-all"></div>
+                                <div className="flex items-center justify-between mb-1">
+                                    <div className="p-2.5 bg-amber-50 rounded-lg">
+                                        <span className="material-symbols-outlined text-amber-600 text-xl">star</span>
+                                    </div>
+                                    <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Kỷ lục</span>
+                                </div>
+                                <p className="text-gray-600 text-sm font-semibold">Cao nhất</p>
+                                <div className="flex items-end gap-2">
+                                    <p className="text-gray-900 text-3xl font-black">{stats.bestRate}%</p>
+                                    <div className="mb-1.5 px-2 py-0.5 bg-amber-100 text-amber-700 text-xs font-bold rounded-md">
+                                        🏆
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </header>
 
                 <div className="p-4 md:p-8">
                     <div className="max-w-[1200px] mx-auto flex flex-col gap-8">
                         {/* Filter Bar */}
-                        <div className="bg-surface-glass backdrop-blur-xl border border-white/10 p-4 rounded-xl flex flex-wrap items-center gap-4 shadow-xl shadow-black/20">
+                        <div className="glass-card rounded-xl p-4 flex flex-wrap items-center gap-4 shadow-xl">
                             {/* Class Select */}
                             <div className="w-full sm:w-64">
                                 <div className="relative">
                                     <select
-                                        className="bg-[#362249]/50 backdrop-blur-lg border border-[#4d3168]/50 w-full pl-3 pr-10 py-2.5 rounded-lg text-white appearance-none focus:ring-2 focus:ring-primary focus:border-transparent outline-none text-sm cursor-pointer"
+                                        className="bg-white border border-gray-200 w-full pl-3 pr-10 py-2.5 rounded-lg text-gray-900 appearance-none focus:ring-2 focus:ring-primary focus:border-transparent outline-none text-sm cursor-pointer"
                                         value={selectedClassId}
                                         onChange={(e) => setSelectedClassId(e.target.value)}
                                     >
-                                        <option className="bg-[#261834]" value="">-- Chọn lớp --</option>
+                                        <option className="bg-white" value="">-- Chọn lớp --</option>
                                         {classes.map(cls => (
-                                            <option className="bg-[#261834]" key={cls.id} value={cls.id}>
+                                            <option className="bg-white" key={cls.id} value={cls.id}>
                                                 {cls.name}
                                             </option>
                                         ))}
                                     </select>
                                     <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
-                                        <span className="material-symbols-outlined text-[#ad90cb]">expand_more</span>
+                                        <span className="material-symbols-outlined text-gray-500">expand_more</span>
                                     </div>
                                 </div>
                             </div>
@@ -357,21 +374,21 @@ export default function HistoryPage() {
                                 <div className="absolute left-[19px] top-4 bottom-4 w-[2px] bg-gradient-to-b from-primary/50 via-[#4d3168] to-transparent"></div>
 
                                 {loading ? (
-                                    <div className="ml-14 text-[#ad90cb]">Đang tải...</div>
+                                    <div className="ml-14 text-gray-600">Đang tải...</div>
                                 ) : groupedSessions.length > 0 ? (
                                     groupedSessions.map(group => (
                                         <div key={group.date} className="flex flex-col gap-6">
                                             <div className="flex items-center gap-4">
-                                                <div className="relative z-10 flex h-10 w-10 items-center justify-center rounded-full bg-[#261834] border-2 border-primary shadow-[0_0_10px_rgba(127,13,242,0.5)]">
-                                                    <span className="material-symbols-outlined text-white text-sm">today</span>
+                                                <div className="relative z-10 flex h-10 w-10 items-center justify-center rounded-full bg-white border-2 border-primary shadow-lg">
+                                                    <span className="material-symbols-outlined text-primary text-sm">today</span>
                                                 </div>
-                                                <h3 className="text-white font-bold text-lg">{formatDate(group.date, { weekday: 'long', day: 'numeric', month: 'long' })}</h3>
+                                                <h3 className="text-gray-900 font-bold text-lg">{formatDate(group.date, { weekday: 'long', day: 'numeric', month: 'long' })}</h3>
                                             </div>
 
                                             {group.items.map(session => (
                                                 <div
                                                     key={session.id}
-                                                    className={`ml-14 bg-surface-glass backdrop-blur-xl border border-white/10 rounded-xl overflow-hidden shadow-lg transition-all ${selectedSession === session.id ? 'border-primary/50 ring-1 ring-primary/20' : 'hover:bg-white/5'}`}
+                                                    className={`ml-14 glass-card rounded-xl overflow-hidden shadow-lg transition-all ${selectedSession === session.id ? 'border-primary/50 ring-2 ring-primary/20' : 'hover:shadow-xl'}`}
                                                 >
                                                     {/* Card Summary */}
                                                     <div
@@ -383,8 +400,8 @@ export default function HistoryPage() {
                                                                 {getSessionInitials(session.attendanceType)}
                                                             </div>
                                                             <div>
-                                                                <h4 className="text-white font-bold text-lg group-hover:text-primary transition-colors">{formatAttendanceType(session.attendanceType)}</h4>
-                                                                <div className="flex items-center gap-2 text-[#ad90cb] text-sm">
+                                                                <h4 className="text-gray-900 font-bold text-lg group-hover:text-primary transition-colors">{formatAttendanceType(session.attendanceType)}</h4>
+                                                                <div className="flex items-center gap-2 text-gray-600 text-sm">
                                                                     <span className="material-symbols-outlined text-[16px]">schedule</span>
                                                                     {session.attendanceMethod === 'qr' ? 'Quét QR' : 'Thủ công'}
                                                                 </div>
@@ -402,37 +419,37 @@ export default function HistoryPage() {
                                                             )}
                                                             <div className="flex flex-col items-end min-w-[80px]">
                                                                 <div className="flex items-center gap-2">
-                                                                    <span className="text-white font-bold text-lg">{session.presentCount}/{session.totalCount}</span>
+                                                                    <span className="text-gray-900 font-bold text-lg">{session.presentCount}/{session.totalCount}</span>
                                                                 </div>
-                                                                <span className="text-xs text-[#0bda73] font-medium">
+                                                                <span className="text-xs text-green-600 font-medium">
                                                                     {session.totalCount ? Math.round(session.presentCount / session.totalCount * 100) : 0}% Có mặt
                                                                 </span>
                                                             </div>
-                                                            <button className={`h-8 w-8 rounded-full bg-white/10 flex items-center justify-center transition-colors transform ${selectedSession === session.id ? 'rotate-180' : ''}`}>
-                                                                <span className="material-symbols-outlined text-white">expand_more</span>
+                                                            <button className={`h-8 w-8 rounded-full bg-gray-100 flex items-center justify-center transition-colors transform ${selectedSession === session.id ? 'rotate-180' : ''}`}>
+                                                                <span className="material-symbols-outlined text-gray-700">expand_more</span>
                                                             </button>
                                                         </div>
                                                     </div>
 
                                                     {/* Expanded Details */}
                                                     {selectedSession === session.id && (
-                                                        <div className="bg-black/20 border-t border-white/5 animate-fade-in-up">
+                                                        <div className="bg-gray-50 border-t border-gray-200 animate-fade-in-up">
                                                             {loadingDetails ? (
-                                                                <div className="p-8 text-center text-[#ad90cb]">Đang tải chi tiết...</div>
+                                                                <div className="p-8 text-center text-gray-600">Đang tải chi tiết...</div>
                                                             ) : sessionDetails ? (
                                                                 <div className="p-5">
                                                                     <div className="flex justify-between items-center mb-4">
-                                                                        <p className="text-sm text-[#ad90cb] font-medium">Danh sách ({sessionDetails.records.length})</p>
+                                                                        <p className="text-sm text-gray-600 font-medium">Danh sách ({sessionDetails.records.length})</p>
                                                                         <div className="flex gap-2">
                                                                             <button
                                                                                 onClick={() => handleBulkUpdate(false)}
-                                                                                className="text-xs bg-red-500/10 text-red-400 px-3 py-1.5 rounded-lg hover:bg-red-500/20 transition-colors border border-red-500/20"
+                                                                                className="text-xs bg-red-50 text-red-600 px-3 py-1.5 rounded-lg hover:bg-red-100 transition-colors border border-red-200"
                                                                             >
                                                                                 Vắng hết
                                                                             </button>
                                                                             <button
                                                                                 onClick={() => handleBulkUpdate(true)}
-                                                                                className="text-xs bg-green-500/10 text-green-400 px-3 py-1.5 rounded-lg hover:bg-green-500/20 transition-colors border border-green-500/20"
+                                                                                className="text-xs bg-green-50 text-green-600 px-3 py-1.5 rounded-lg hover:bg-green-100 transition-colors border border-green-200"
                                                                             >
                                                                                 Có hết
                                                                             </button>
@@ -442,19 +459,19 @@ export default function HistoryPage() {
                                                                         {sessionDetails.records.map(record => (
                                                                             <div
                                                                                 key={record.id}
-                                                                                className="flex items-center gap-2 p-2 rounded-lg bg-[#261834] border border-white/5 cursor-pointer hover:bg-white/5 transition-colors group"
+                                                                                className="flex items-center gap-2 p-2 rounded-lg bg-white border border-gray-200 cursor-pointer hover:shadow-md transition-all group"
                                                                                 onClick={(e) => {
                                                                                     e.stopPropagation();
                                                                                     // Toggle status
                                                                                     handleUpdateStudentStatus(session.id, record.studentId, !record.isPresent, record.fullName);
                                                                                 }}
                                                                             >
-                                                                                <div className={`h-8 w-8 rounded-full flex items-center justify-center text-xs font-bold text-white ${record.isPresent ? 'bg-green-500/20 text-green-400 border border-green-500/30' : 'bg-red-500/20 text-red-400 border border-red-500/30'}`}>
+                                                                                <div className={`h-8 w-8 rounded-full flex items-center justify-center text-xs font-bold ${record.isPresent ? 'bg-green-100 text-green-700 border border-green-300' : 'bg-red-100 text-red-700 border border-red-300'}`}>
                                                                                     {record.fullName.substring(0, 1)}
                                                                                 </div>
                                                                                 <div className="flex flex-col min-w-0">
-                                                                                    <span className="text-white text-xs font-medium truncate">{record.fullName}</span>
-                                                                                    <span className={`text-[10px] font-bold ${record.isPresent ? 'text-green-400' : 'text-red-400'}`}>
+                                                                                    <span className="text-gray-900 text-xs font-medium truncate">{record.baptismalName ? `${record.baptismalName} ${record.fullName}` : record.fullName}</span>
+                                                                                    <span className={`text-[10px] font-bold ${record.isPresent ? 'text-green-600' : 'text-red-600'}`}>
                                                                                         {record.isPresent ? 'Có mặt' : 'Vắng'}
                                                                                     </span>
                                                                                 </div>
@@ -470,12 +487,12 @@ export default function HistoryPage() {
                                         </div>
                                     ))
                                 ) : selectedClassId ? (
-                                    <div className="ml-14 p-8 rounded-xl bg-surface-glass border border-white/10 text-center">
-                                        <p className="text-[#ad90cb]">Chưa có dữ liệu điểm danh nào.</p>
+                                    <div className="ml-14 p-8 rounded-xl glass-card text-left">
+                                        <p className="text-gray-600">Chưa có dữ liệu điểm danh nào.</p>
                                     </div>
                                 ) : (
-                                    <div className="ml-14 p-8 rounded-xl bg-surface-glass border border-white/10 text-center">
-                                        <p className="text-[#ad90cb]">Vui lòng chọn một lớp để xem lịch sử.</p>
+                                    <div className="ml-14 p-8 rounded-xl glass-card text-left">
+                                        <p className="text-gray-600">Vui lòng chọn một lớp để xem lịch sử.</p>
                                     </div>
                                 )}
                             </div>
@@ -524,7 +541,7 @@ export default function HistoryPage() {
                         )}
                     </div>
                 </div>
-            </div>
-        </div>
+            </div >
+        </div >
     );
 }
