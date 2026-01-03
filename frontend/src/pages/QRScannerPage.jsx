@@ -349,9 +349,9 @@ export default function QRScannerPage() {
     const selectedClass = classes.find(c => c.id == selectedClassId);
 
     return (
-        <div className="flex-1 flex flex-col h-full overflow-hidden relative bg-background-light dark:bg-background-dark min-h-screen">
+        <div className="flex-1 flex flex-col h-full overflow-hidden relative bg-[#191022] text-white min-h-screen dark">
             {/* Decorative background blob */}
-            <div className="absolute top-[-20%] right-[-10%] w-[600px] h-[600px] bg-primary/20 rounded-full blur-[120px] pointer-events-none z-0"></div>
+            <div className="absolute top-[-20%] right-[-10%] w-[600px] h-[600px] bg-primary/10 rounded-full blur-[120px] pointer-events-none z-0"></div>
             <div className="absolute bottom-[-20%] left-[-10%] w-[500px] h-[500px] bg-blue-500/10 rounded-full blur-[100px] pointer-events-none z-0"></div>
 
             <div className={`flex-1 overflow-y-auto z-10 p-4 lg:p-10 pb-24 lg:pb-10`}>
@@ -366,21 +366,21 @@ export default function QRScannerPage() {
                                     <span className="material-symbols-outlined text-sm">qr_code_scanner</span>
                                     Điểm Danh QR
                                 </div>
-                                <h2 className="text-2xl lg:text-4xl font-black text-slate-900 dark:text-white tracking-tight mb-2">
+                                <h2 className="text-2xl lg:text-4xl font-black text-white tracking-tight mb-2">
                                     Chuẩn Bị Điểm Danh
                                 </h2>
-                                <p className="text-sm lg:text-base text-slate-500 dark:text-slate-400 px-4">
+                                <p className="text-sm lg:text-base text-gray-400 px-4">
                                     Vui lòng chọn thông tin lớp và ngày để bắt đầu
                                 </p>
                             </div>
 
-                            <div className="glass-panel p-6 lg:p-8 rounded-2xl lg:rounded-3xl shadow-xl border border-white/50 relative overflow-hidden mx-2 lg:mx-0">
+                            <div className="bg-[#191022]/60 backdrop-blur-xl border border-white/10 p-6 lg:p-8 rounded-2xl lg:rounded-3xl shadow-xl relative overflow-hidden mx-2 lg:mx-0">
                                 {/* Decorative top gradient line */}
                                 <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary via-purple-400 to-blue-400"></div>
 
                                 <form onSubmit={(e) => { e.preventDefault(); startScanning(); }} className="flex flex-col gap-5 lg:gap-6 pt-2">
                                     <div className="form-group mb-0">
-                                        <label htmlFor="classSelect" className="block text-sm font-bold text-slate-700 dark:text-slate-200 mb-2">
+                                        <label htmlFor="classSelect" className="block text-sm font-bold text-gray-300 mb-2">
                                             Chọn Lớp <span className="text-red-500">*</span>
                                         </label>
                                         <div className="relative">
@@ -389,7 +389,7 @@ export default function QRScannerPage() {
                                             </div>
                                             <select
                                                 id="classSelect"
-                                                className="form-select w-full pl-10 py-3 rounded-xl border-slate-200 dark:border-slate-700 bg-slate-50/50 focus:ring-primary focus:border-primary transition-all font-medium text-sm lg:text-base"
+                                                className="form-select w-full pl-10 py-3 rounded-xl border-white/10 bg-white/5 focus:ring-primary focus:border-primary transition-all font-medium text-sm lg:text-base text-white"
                                                 value={selectedClassId}
                                                 onChange={(e) => setSelectedClassId(e.target.value)}
                                             >
@@ -404,14 +404,14 @@ export default function QRScannerPage() {
                                     </div>
 
                                     <div className="form-group mb-0">
-                                        <label htmlFor="attendanceDate" className="block text-sm font-bold text-slate-700 dark:text-slate-200 mb-2">
+                                        <label htmlFor="attendanceDate" className="block text-sm font-bold text-gray-300 mb-2">
                                             Ngày Điểm Danh
                                         </label>
                                         <div className="relative">
                                             <input
                                                 type="date"
                                                 id="attendanceDate"
-                                                className="form-input w-full pl-4 lg:pl-10 py-3 rounded-xl border-slate-200 dark:border-slate-700 bg-slate-50/50 focus:ring-primary focus:border-primary transition-all font-medium text-sm lg:text-base text-center lg:text-left"
+                                                className="form-input w-full pl-4 lg:pl-10 py-3 rounded-xl border-white/10 bg-white/5 focus:ring-primary focus:border-primary transition-all font-medium text-sm lg:text-base text-center lg:text-left text-white"
                                                 value={attendanceDate}
                                                 onChange={(e) => setAttendanceDate(e.target.value)}
                                             />
@@ -432,7 +432,7 @@ export default function QRScannerPage() {
                                     </div>
 
                                     <div className="form-group mb-0">
-                                        <label htmlFor="attendanceType" className="block text-sm font-bold text-slate-700 dark:text-slate-200 mb-2">
+                                        <label htmlFor="attendanceType" className="block text-sm font-bold text-gray-300 mb-2">
                                             Loại Điểm Danh
                                         </label>
                                         <div className="relative">
@@ -441,7 +441,7 @@ export default function QRScannerPage() {
                                             </div>
                                             <select
                                                 id="attendanceType"
-                                                className="form-select w-full pl-10 py-3 rounded-xl border-slate-200 dark:border-slate-700 bg-slate-50/50 focus:ring-primary focus:border-primary transition-all font-medium text-sm lg:text-base"
+                                                className="form-select w-full pl-10 py-3 rounded-xl border-white/10 bg-white/5 focus:ring-primary focus:border-primary transition-all font-medium text-sm lg:text-base text-white"
                                                 value={attendanceType}
                                                 onChange={(e) => setAttendanceType(e.target.value)}
                                                 disabled={getAllowedAttendanceTypes(attendanceDate).length === 0}
@@ -481,18 +481,18 @@ export default function QRScannerPage() {
                                 <div className="flex flex-wrap justify-between items-end gap-3">
                                     <div className="flex-1">
                                         <nav className="flex items-center gap-2 text-xs lg:text-sm mb-1">
-                                            <span className="text-slate-500">Giáo Lý</span>
-                                            <span className="text-slate-300">/</span>
+                                            <span className="text-gray-500">Giáo Lý</span>
+                                            <span className="text-gray-700">/</span>
                                             <span className="text-primary font-medium">QR</span>
                                         </nav>
-                                        <h2 className="text-2xl lg:text-4xl font-black text-slate-900 dark:text-white tracking-tight">
+                                        <h2 className="text-2xl lg:text-4xl font-black text-white tracking-tight">
                                             Đang Quét
                                         </h2>
                                         <div className="flex flex-wrap items-center gap-2 mt-2">
-                                            <span className="px-2 lg:px-3 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs lg:text-sm font-bold border border-slate-200 dark:border-slate-700">
+                                            <span className="px-2 lg:px-3 py-1 rounded-full bg-white/10 text-gray-300 text-xs lg:text-sm font-bold border border-white/10">
                                                 {selectedClass?.name}
                                             </span>
-                                            <span className="px-2 lg:px-3 py-1 rounded-full bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-300 text-xs lg:text-sm font-bold border border-blue-100 dark:border-blue-800 truncate max-w-[150px]">
+                                            <span className="px-2 lg:px-3 py-1 rounded-full bg-blue-500/10 text-blue-300 text-xs lg:text-sm font-bold border border-blue-500/20 truncate max-w-[150px]">
                                                 {attendanceType}
                                             </span>
                                         </div>
@@ -535,13 +535,13 @@ export default function QRScannerPage() {
                                         {/* Success Popup */}
                                         {showSuccessPopup && (
                                             <div className="absolute top-8 left-1/2 -translate-x-1/2 z-20 pointer-events-none w-max max-w-[90%]">
-                                                <div className="glass-panel px-4 py-3 lg:px-6 lg:py-4 rounded-xl lg:rounded-2xl flex items-center gap-3 lg:gap-4 shadow-xl animate-bounce duration-[2000ms] bg-white/95 backdrop-blur-xl border-l-4 border-green-500 scale-90 lg:scale-100">
-                                                    <div className="bg-green-100 text-green-600 rounded-full p-2">
+                                                <div className="bg-[#191022]/90 backdrop-blur-xl px-4 py-3 lg:px-6 lg:py-4 rounded-xl lg:rounded-2xl flex items-center gap-3 lg:gap-4 shadow-xl animate-bounce duration-[2000ms] border-l-4 border-green-500 scale-90 lg:scale-100 border border-white/10">
+                                                    <div className="bg-green-500/10 text-green-500 rounded-full p-2">
                                                         <span className="material-symbols-outlined text-xl lg:text-2xl font-bold block">check_circle</span>
                                                     </div>
                                                     <div>
-                                                        <p className="text-xs lg:text-sm font-bold text-slate-800 uppercase tracking-wide opacity-70">Đã điểm danh</p>
-                                                        <p className="text-base lg:text-lg font-black text-slate-900 truncate max-w-[150px] lg:max-w-xs">{lastScannedName}</p>
+                                                        <p className="text-xs lg:text-sm font-bold text-gray-300 uppercase tracking-wide opacity-70">Đã điểm danh</p>
+                                                        <p className="text-base lg:text-lg font-black text-white truncate max-w-[150px] lg:max-w-xs">{lastScannedName}</p>
                                                     </div>
                                                 </div>
                                             </div>
@@ -568,8 +568,8 @@ export default function QRScannerPage() {
                                     </div>
 
                                     {/* Instructional Text */}
-                                    <div className="flex justify-between items-center px-4 py-3 bg-white/40 rounded-xl">
-                                        <p className="text-slate-600 text-xs lg:text-sm flex items-center gap-2 font-medium">
+                                    <div className="flex justify-between items-center px-4 py-3 bg-[#191022]/80 border border-white/10 rounded-xl">
+                                        <p className="text-gray-300 text-xs lg:text-sm flex items-center gap-2 font-medium">
                                             <span className="material-symbols-outlined text-primary text-base">qr_code_scanner</span>
                                             <span className="mobile-hide">Di chuyển camera để mã QR nằm trong khung vuông.</span>
                                             <span className="desktop-hide">Quét mã QR vào khung</span>
@@ -596,11 +596,11 @@ export default function QRScannerPage() {
 
                                 {/* Right Column: Recently Scanned - Collapsible or small on User request but here kept as column */}
                                 <div className="w-full lg:w-1/3 flex flex-col h-[400px] lg:h-auto">
-                                    <div className="glass-panel h-full rounded-2xl lg:rounded-3xl flex flex-col overflow-hidden shadow-xl bg-white/70 border border-white/60">
-                                        <div className="p-4 lg:p-5 border-b border-indigo-50 flex justify-between items-center bg-gradient-to-r from-white/60 to-indigo-50/30">
+                                    <div className="bg-[#191022]/60 backdrop-blur-xl h-full rounded-2xl lg:rounded-3xl flex flex-col overflow-hidden shadow-xl border border-white/10">
+                                        <div className="p-4 lg:p-5 border-b border-white/10 flex justify-between items-center bg-white/5">
                                             <div className="flex items-center gap-2">
-                                                <span className="material-symbols-outlined text-indigo-500">history</span>
-                                                <h3 className="font-bold text-slate-800 text-sm lg:text-base">Đã Quét</h3>
+                                                <span className="material-symbols-outlined text-indigo-400">history</span>
+                                                <h3 className="font-bold text-white text-sm lg:text-base">Đã Quét</h3>
                                             </div>
                                             <span className="text-xs font-bold px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full border border-indigo-200">
                                                 {scannedStudents.length}
@@ -608,23 +608,23 @@ export default function QRScannerPage() {
                                         </div>
                                         <div className="flex-1 overflow-y-auto p-3 lg:p-4 space-y-2 lg:space-y-3 custom-scrollbar">
                                             {scannedStudents.length === 0 ? (
-                                                <div className="flex flex-col items-center justify-center h-full text-slate-400 gap-3 opacity-60">
-                                                    <div className="size-16 rounded-full bg-slate-100 flex items-center justify-center">
-                                                        <span className="material-symbols-outlined text-3xl text-slate-300">qr_code_2</span>
+                                                <div className="flex flex-col items-center justify-center h-full text-gray-500 gap-3 opacity-60">
+                                                    <div className="size-16 rounded-full bg-white/5 flex items-center justify-center">
+                                                        <span className="material-symbols-outlined text-3xl text-gray-600">qr_code_2</span>
                                                     </div>
                                                     <p className="text-sm font-medium">Chưa có thiếu nhi nào</p>
                                                 </div>
                                             ) : (
                                                 [...scannedStudents].reverse().map((student, idx) => (
-                                                    <div key={idx} className="flex items-center gap-3 p-3 bg-white rounded-xl border border-slate-100 shadow-sm hover:shadow-md transition-all group hover:border-primary/30">
+                                                    <div key={idx} className="flex items-center gap-3 p-3 bg-white/5 rounded-xl border border-white/5 shadow-sm hover:bg-white/10 transition-all group">
                                                         <div className="flex items-center justify-center size-8 lg:size-10 rounded-full shrink-0 bg-gradient-to-br from-primary to-purple-600 text-white font-bold text-xs lg:text-sm shadow-md">
                                                             {student.studentName.charAt(0)}
                                                         </div>
                                                         <div className="flex-1 min-w-0">
-                                                            <p className="text-xs lg:text-sm font-bold text-slate-800 truncate group-hover:text-primary transition-colors">
+                                                            <p className="text-xs lg:text-sm font-bold text-white truncate group-hover:text-primary transition-colors">
                                                                 {student.baptismalName} {student.studentName}
                                                             </p>
-                                                            <p className="text-[10px] lg:text-xs text-slate-500 flex items-center gap-1">
+                                                            <p className="text-[10px] lg:text-xs text-gray-400 flex items-center gap-1">
                                                                 <span className="material-symbols-outlined text-[10px] opacity-50">badge</span>
                                                                 {student.studentId}
                                                             </p>
@@ -640,7 +640,7 @@ export default function QRScannerPage() {
                                                 ))
                                             )}
                                         </div>
-                                        <div className="p-4 border-t border-slate-100 bg-slate-50/50">
+                                        <div className="p-4 border-t border-white/10 bg-black/20">
                                             <button
                                                 onClick={stopScanning}
                                                 className="w-full py-3 rounded-xl text-sm font-bold text-primary hover:text-white hover:bg-primary transition-all border border-primary/20 hover:border-primary flex items-center justify-center gap-2"

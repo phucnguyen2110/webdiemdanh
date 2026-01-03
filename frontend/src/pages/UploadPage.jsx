@@ -110,7 +110,7 @@ export default function UploadPage() {
     );
 
     return (
-        <div className="flex flex-col h-full overflow-hidden page-gradient">
+        <div className="flex flex-col h-full overflow-hidden bg-[#191022] text-white dark">
             <div className="flex-1 flex flex-col h-full overflow-hidden relative z-10">
                 <div className="px-4 md:px-8 lg:px-12 py-8 w-full h-full overflow-y-auto custom-scrollbar">
                     {/* Breadcrumbs */}
@@ -125,8 +125,8 @@ export default function UploadPage() {
                     {/* Page Header */}
                     <div className="flex flex-wrap justify-between items-end gap-4 mb-10">
                         <div className="flex flex-col gap-1">
-                            <h1 className="text-[#140d1c] dark:text-white text-3xl font-black leading-tight tracking-tight">Tạo Lớp Mới</h1>
-                            <p className="text-gray-500 dark:text-gray-400 text-base font-normal">Khởi tạo lớp mới và import danh sách thiếu nhi.</p>
+                            <h1 className="text-white text-3xl font-black leading-tight tracking-tight">Tạo Lớp Mới</h1>
+                            <p className="text-gray-400 text-base font-normal">Khởi tạo lớp mới và import danh sách thiếu nhi.</p>
                         </div>
                     </div>
 
@@ -135,17 +135,17 @@ export default function UploadPage() {
                         {/* Left Column: Form & Upload */}
                         <div className="md:col-span-2 flex flex-col gap-6">
                             {/* Class Details Section */}
-                            <div className="glass-panel rounded-2xl p-6 shadow-sm">
-                                <h2 className="text-lg font-bold text-gray-800 dark:text-white mb-4 flex items-center gap-2">
+                            <div className="bg-[#191022]/60 backdrop-blur-xl border border-white/10 rounded-2xl p-6 shadow-xl">
+                                <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
                                     <span className="material-symbols-outlined text-primary">edit_note</span>
                                     Thông Tin Lớp
                                 </h2>
                                 <div className="grid grid-cols-1 gap-6">
                                     <label className="flex flex-col w-full">
-                                        <span className="text-gray-700 dark:text-gray-300 text-sm font-medium pb-2">Tên Lớp <span className="text-red-500">*</span></span>
+                                        <span className="text-gray-300 text-sm font-medium pb-2">Tên Lớp <span className="text-red-500">*</span></span>
                                         <div className="relative group">
                                             <input
-                                                className={`form-input flex w-full rounded-xl border ${isDuplicate ? 'border-red-500 focus:border-red-500 focus:ring-red-500/10' : 'border-gray-200 dark:border-gray-600 focus:border-primary focus:ring-primary/10'} bg-white dark:bg-black/20 px-4 h-12 text-base outline-none focus:ring-4 transition-all placeholder:text-gray-400 dark:text-white`}
+                                                className={`form-input flex w-full rounded-xl border ${isDuplicate ? 'border-red-500 focus:border-red-500 focus:ring-red-500/10' : 'border-white/10 focus:border-primary focus:ring-primary/10'} bg-white/5 px-4 h-12 text-base outline-none focus:ring-4 transition-all placeholder:text-gray-500 text-white`}
                                                 placeholder="VD: Thiếu Nhi 1A, Thiếu Nhi 2A..."
                                                 type="text"
                                                 value={className}
@@ -169,8 +169,8 @@ export default function UploadPage() {
                             </div>
 
                             {/* Upload Section */}
-                            <div className="glass-panel rounded-2xl p-6 shadow-sm">
-                                <h2 className="text-lg font-bold text-gray-800 dark:text-white mb-4 flex items-center gap-2">
+                            <div className="bg-[#191022]/60 backdrop-blur-xl border border-white/10 rounded-2xl p-6 shadow-xl">
+                                <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
                                     <span className="material-symbols-outlined text-primary">upload_file</span>
                                     Import Danh Sách
                                 </h2>
@@ -184,17 +184,17 @@ export default function UploadPage() {
                                         onChange={handleFileChange}
                                         disabled={loading}
                                     />
-                                    <div className={`flex flex-col items-center justify-center gap-4 rounded-xl border-2 border-dashed ${file ? 'border-primary bg-primary/5' : 'border-primary/30 bg-primary/5'} hover:bg-primary/10 hover:border-primary transition-all duration-300 px-6 py-12 text-center group-hover:scale-[1.01]`}>
-                                        <div className="size-16 rounded-full bg-white dark:bg-white/10 flex items-center justify-center shadow-sm text-primary mb-2 group-hover:scale-110 transition-transform duration-300">
+                                    <div className={`flex flex-col items-center justify-center gap-4 rounded-xl border-2 border-dashed ${file ? 'border-primary bg-primary/5' : 'border-white/10 bg-white/5'} hover:bg-white/10 hover:border-primary transition-all duration-300 px-6 py-12 text-center group-hover:scale-[1.01]`}>
+                                        <div className="size-16 rounded-full bg-white/10 flex items-center justify-center shadow-sm text-primary mb-2 group-hover:scale-110 transition-transform duration-300">
                                             <span className="material-symbols-outlined text-4xl">
                                                 {file ? 'description' : 'cloud_upload'}
                                             </span>
                                         </div>
                                         <div className="flex flex-col items-center gap-1">
-                                            <p className="text-gray-900 dark:text-white text-lg font-bold leading-tight">
+                                            <p className="text-white text-lg font-bold leading-tight">
                                                 {file ? file.name : 'Click hoặc kéo thả file Excel vào đây'}
                                             </p>
-                                            <p className="text-gray-500 dark:text-gray-400 text-sm max-w-sm">
+                                            <p className="text-gray-400 text-sm max-w-sm">
                                                 {file ? `Kích thước: ${(file.size / 1024).toFixed(2)} KB` : 'Hỗ trợ file .xlsx hoặc .xls (tối đa 5MB)'}
                                             </p>
                                         </div>
@@ -254,9 +254,9 @@ export default function UploadPage() {
 
                         {/* Right Column: Instructions Sidebar */}
                         <div className="md:col-span-1 mt-8 md:mt-0">
-                            <div className="glass-panel sticky top-6 rounded-2xl p-0 overflow-hidden shadow-lg border-t-4 border-t-primary">
-                                <div className="bg-primary/5 p-5 border-b border-primary/10">
-                                    <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                            <div className="bg-[#191022]/60 backdrop-blur-xl border border-white/10 sticky top-6 rounded-2xl p-0 overflow-hidden shadow-xl border-t-4 border-t-primary">
+                                <div className="bg-white/5 p-5 border-b border-white/10">
+                                    <h3 className="text-lg font-bold text-white flex items-center gap-2">
                                         <span className="material-symbols-outlined text-primary">lightbulb</span>
                                         Hướng Dẫn Import
                                     </h3>
