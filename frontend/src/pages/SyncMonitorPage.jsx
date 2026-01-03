@@ -220,12 +220,12 @@ export default function SyncMonitorPage() {
     const filteredLogs = getFilteredLogs();
 
     return (
-        <div className="sync-monitor-page bg-background-dark text-white font-display overflow-hidden selection:bg-primary/30 h-full w-full fixed inset-0 z-40 md:static md:h-full md:flex-1 md:w-full md:z-auto">
+        <div className="sync-monitor-page bg-[#191022] text-white font-display overflow-hidden selection:bg-primary/30 h-full w-full fixed inset-0 z-40 md:static md:h-full md:flex-1 md:w-full md:z-auto dark">
             {/* Note: using fixed inset-0 on mobile to cover navigation, but on desktop we might want it proper. 
                 Actually, the user requested full screen like AdminPage.
                 Let's use a wrapper that ensures it fills the container.
             */}
-            <div className="relative flex flex-col w-full h-full overflow-hidden bg-background-dark">
+            <div className="relative flex flex-col w-full h-full overflow-hidden bg-[#191022]">
                 {/* Ambient Background Effects */}
                 <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none -z-10">
                     <div className="absolute top-[-20%] left-[-10%] w-[60%] h-[60%] bg-primary/10 rounded-full blur-[150px]"></div>

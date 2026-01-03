@@ -257,7 +257,7 @@ export default function AttendancePage() {
     };
 
     return (
-        <div className="flex h-full w-full flex-col relative overflow-hidden bg-[#f7f5f8] dark:bg-[#191022] text-slate-900 dark:text-slate-100 font-sans">
+        <div className="flex h-full w-full flex-col relative overflow-hidden bg-[#191022] text-slate-100 font-sans dark">
             {/* Ambient Background Blobs */}
             <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none">
                 <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-[#7f0df2]/10 blur-[100px]"></div>
@@ -270,10 +270,10 @@ export default function AttendancePage() {
                     {/* Top Row: Title & Actions */}
                     <div className="flex flex-wrap justify-between items-center gap-4">
                         <div>
-                            <h2 className="text-2xl md:text-3xl font-black tracking-tight text-slate-900 dark:text-white">
+                            <h2 className="text-2xl md:text-3xl font-black tracking-tight text-white">
                                 Điểm Danh Thiếu Nhi
                             </h2>
-                            <p className="text-slate-500 dark:text-slate-400 font-medium mt-1 flex items-center gap-2 text-sm md:text-base">
+                            <p className="text-slate-400 font-medium mt-1 flex items-center gap-2 text-sm md:text-base">
                                 <span className="material-symbols-outlined text-lg">calendar_today</span>
                                 {attendanceDate ? formatVietnameseDate(attendanceDate) : 'Chọn ngày'}
                                 {selectedClassId && (
@@ -308,13 +308,13 @@ export default function AttendancePage() {
                     </div>
 
                     {/* Filter Controls Row (Glassmorphic Container) */}
-                    <div className="glass-panel rounded-2xl p-4 flex flex-wrap items-end gap-4 shadow-sm z-20">
+                    <div className="bg-[#191022]/60 backdrop-blur-xl border border-white/10 rounded-2xl p-4 flex flex-wrap items-end gap-4 shadow-sm z-20">
                         {/* Class Select */}
                         <div className="flex-1 min-w-[200px]">
-                            <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5 ml-1">Lớp Học</label>
+                            <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5 ml-1">Lớp Học</label>
                             <div className="relative group">
                                 <select
-                                    className="w-full h-11 pl-4 pr-10 rounded-xl bg-white/50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white text-sm font-medium focus:ring-2 focus:ring-[#7f0df2]/50 focus:border-[#7f0df2] transition-all appearance-none cursor-pointer hover:bg-white/80 dark:hover:bg-slate-800/80 outline-none"
+                                    className="w-full h-11 pl-4 pr-10 rounded-xl bg-white/5 border border-white/10 text-white text-sm font-medium focus:ring-2 focus:ring-[#7f0df2]/50 focus:border-[#7f0df2] transition-all appearance-none cursor-pointer hover:bg-white/10 outline-none"
                                     value={selectedClassId}
                                     onChange={(e) => setSelectedClassId(e.target.value)}
                                     disabled={loading}
@@ -334,11 +334,11 @@ export default function AttendancePage() {
 
                         {/* Date Picker */}
                         <div className="flex-1 min-w-[150px]">
-                            <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5 ml-1">Ngày</label>
+                            <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5 ml-1">Ngày</label>
                             <div className="relative group">
                                 <input
                                     type="date"
-                                    className="w-full h-11 pl-10 pr-4 rounded-xl bg-white/50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white text-sm font-medium focus:ring-2 focus:ring-[#7f0df2]/50 focus:border-[#7f0df2] transition-all cursor-pointer hover:bg-white/80 dark:hover:bg-slate-800/80 outline-none"
+                                    className="w-full h-11 pl-10 pr-4 rounded-xl bg-white/5 border border-white/10 text-white text-sm font-medium focus:ring-2 focus:ring-[#7f0df2]/50 focus:border-[#7f0df2] transition-all cursor-pointer hover:bg-white/10 outline-none"
                                     value={attendanceDate}
                                     onChange={(e) => setAttendanceDate(e.target.value)}
                                     disabled={loading}
@@ -351,10 +351,10 @@ export default function AttendancePage() {
 
                         {/* Session Select (Attendance Type) */}
                         <div className="flex-1 min-w-[200px]">
-                            <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5 ml-1">Loại Điểm Danh</label>
+                            <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5 ml-1">Loại Điểm Danh</label>
                             <div className="relative group">
                                 <select
-                                    className="w-full h-11 pl-4 pr-10 rounded-xl bg-white/50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white text-sm font-medium focus:ring-2 focus:ring-[#7f0df2]/50 focus:border-[#7f0df2] transition-all appearance-none cursor-pointer hover:bg-white/80 dark:hover:bg-slate-800/80 outline-none"
+                                    className="w-full h-11 pl-4 pr-10 rounded-xl bg-white/5 border border-white/10 text-white text-sm font-medium focus:ring-2 focus:ring-[#7f0df2]/50 focus:border-[#7f0df2] transition-all appearance-none cursor-pointer hover:bg-white/10 outline-none"
                                     value={attendanceType}
                                     onChange={(e) => setAttendanceType(e.target.value)}
                                     disabled={loading || allowedTypes.length === 0}
@@ -399,14 +399,14 @@ export default function AttendancePage() {
                     </div>
                 ) : students.length > 0 ? (
                     students.map((student) => (
-                        <div key={student.id} className="glass-card rounded-2xl p-4 flex flex-col items-center gap-4 group hover:bg-white/60 dark:hover:bg-slate-800/70 transition-all duration-300">
+                        <div key={student.id} className="bg-[#191022]/60 backdrop-blur-xl border border-white/10 rounded-2xl p-4 flex flex-col items-center gap-4 group hover:bg-white/10 transition-all duration-300">
                             {/* Student Info */}
                             <div className="flex items-center gap-4 w-full">
-                                <div className="size-12 rounded-full bg-[#7f0df2]/10 flex items-center justify-center shrink-0 border-2 border-white dark:border-slate-600 shadow-sm text-[#7f0df2] font-bold text-lg">
+                                <div className="size-12 rounded-full bg-[#7f0df2]/10 flex items-center justify-center shrink-0 border-2 border-white/20 shadow-sm text-[#7f0df2] font-bold text-lg">
                                     {getInitials(student.fullName)}
                                 </div>
                                 <div className="flex flex-col">
-                                    <h3 className="text-base font-bold text-slate-900 dark:text-white group-hover:text-[#7f0df2] transition-colors">
+                                    <h3 className="text-base font-bold text-white group-hover:text-[#7f0df2] transition-colors">
                                         {student.stt}. {student.baptismalName} {student.fullName}
                                     </h3>
                                     {/* <span className="text-xs font-medium text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-700/50 px-2 py-0.5 rounded-full w-fit">
@@ -417,7 +417,7 @@ export default function AttendancePage() {
 
                             {/* Status Controls */}
                             <div className="flex items-center justify-between w-full gap-4">
-                                <div className="flex items-center p-1 bg-slate-100/80 dark:bg-slate-900/50 rounded-xl border border-slate-200/50 dark:border-slate-700/50 w-full justify-center">
+                                <div className="flex items-center p-1 bg-white/5 rounded-xl border border-white/10 w-full justify-center">
                                     <label className="cursor-pointer flex-1">
                                         <input
                                             type="radio"
@@ -426,7 +426,7 @@ export default function AttendancePage() {
                                             checked={!!checkedStudents[student.id]}
                                             onChange={() => setStudentStatus(student.id, true)}
                                         />
-                                        <div className={`px-4 py-2 rounded-lg text-sm font-bold transition-all flex items-center justify-center gap-2 ${checkedStudents[student.id] ? 'bg-[#7f0df2] text-white shadow-md' : 'text-slate-500 dark:text-slate-400 hover:bg-white/50'}`}>
+                                        <div className={`px-4 py-2 rounded-lg text-sm font-bold transition-all flex items-center justify-center gap-2 ${checkedStudents[student.id] ? 'bg-[#7f0df2] text-white shadow-md' : 'text-gray-400 hover:bg-white/10'}`}>
                                             <span className="material-symbols-outlined text-[18px] hidden sm:block">check</span>
                                             Có mặt
                                         </div>
@@ -439,7 +439,7 @@ export default function AttendancePage() {
                                             checked={!checkedStudents[student.id]}
                                             onChange={() => setStudentStatus(student.id, false)}
                                         />
-                                        <div className={`px-4 py-2 rounded-lg text-sm font-bold transition-all flex items-center justify-center gap-2 ${!checkedStudents[student.id] ? 'bg-rose-500 text-white shadow-md' : 'text-slate-500 dark:text-slate-400 hover:bg-white/50'}`}>
+                                        <div className={`px-4 py-2 rounded-lg text-sm font-bold transition-all flex items-center justify-center gap-2 ${!checkedStudents[student.id] ? 'bg-rose-500 text-white shadow-md' : 'text-gray-400 hover:bg-white/10'}`}>
                                             <span className="material-symbols-outlined text-[18px] hidden sm:block">close</span>
                                             Vắng
                                         </div>
@@ -462,9 +462,9 @@ export default function AttendancePage() {
             </div>
 
             {/* Sticky Bottom Bar */}
-            <div className={`absolute bottom-0 w-full glass-panel border-t border-white/50 dark:border-white/10 px-4 md:px-6 py-4 flex flex-col md:flex-row items-center justify-between gap-4 z-20 shadow-[0_-4px_20px_rgba(0,0,0,0.05)] transition-transform duration-300 ${students.length > 0 ? 'translate-y-0' : 'translate-y-full'}`}>
+            <div className={`absolute bottom-0 w-full bg-[#191022]/80 backdrop-blur-xl border-t border-white/10 px-4 md:px-6 py-4 flex flex-col md:flex-row items-center justify-between gap-4 z-20 shadow-[0_-4px_20px_rgba(0,0,0,0.2)] transition-transform duration-300 ${students.length > 0 ? 'translate-y-0' : 'translate-y-full'}`}>
                 <div className="flex gap-4 md:gap-6 text-sm font-medium w-full md:w-auto justify-center md:justify-start">
-                    <div className="flex items-center gap-2 text-slate-900 dark:text-white">
+                    <div className="flex items-center gap-2 text-white">
                         <span className="size-2 rounded-full bg-slate-400"></span>
                         <span>Tổng: <span className="font-bold">{students.length}</span></span>
                     </div>
