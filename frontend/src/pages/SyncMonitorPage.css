@@ -1,0 +1,80 @@
+/* SyncMonitorPage.css */
+
+/* Custom scrollbar for glassmorphism feel */
+.sync-monitor-page ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+.sync-monitor-page ::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.sync-monitor-page ::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 3px;
+}
+
+.sync-monitor-page ::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.glass-panel-dark {
+    background: rgba(25, 16, 34, 0.6);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+}
+
+.glass-card-dark {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    transition: all 0.3s ease;
+}
+
+.glass-card-dark:hover {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(127, 13, 242, 0.3);
+}
+
+.text-glow {
+    text-shadow: 0 0 20px rgba(127, 13, 242, 0.5);
+}
+
+.status-dot {
+    box-shadow: 0 0 10px currentColor;
+}
+
+/* Animation utilities */
+@keyframes spin-slow {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.animate-spin-slow {
+    animation: spin-slow 3s linear infinite;
+}
+
+/* Ensure full height container */
+.sync-monitor-wrapper {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    /* Fill parent */
+    min-height: calc(100vh - 80px);
+    /* Adjust based on header/nav */
+    overflow: hidden;
+}
+
+@media (max-width: 768px) {
+    .sync-monitor-wrapper {
+        min-height: calc(100vh - 80px - 60px);
+        /* Mobile nav offset */
+    }
+}

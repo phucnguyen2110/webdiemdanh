@@ -97,15 +97,29 @@ class SyncManager {
             try {
                 const resolvedIds = await syncErrorsAPI.getMyResolvedAttendanceIds();
                 if (resolvedIds.length > 0) {
-                    console.log(`🗑️ Found ${resolvedIds.length} resolved errors, cleaning up...`);
-                    for (const attendanceId of resolvedIds) {
+                    console.log(`🗑️ Found ${resolvedIds.length} resolved errors from server:`, resolvedIds);
+
+                    for (const rawId of resolvedIds) {
+                        // Ensure ID is a number (IndexedDB keys are numbers)
+                        const attendanceId = Number(rawId);
+
+                        if (isNaN(attendanceId)) {
+                            console.warn(`⚠️ Invalid attendance ID received: ${rawId}`);
+                            continue;
+                        }
+
+                        console.log(`🗑️ Deleting resolved pending attendance #${attendanceId}`);
                         await deletePendingAttendance(attendanceId);
+
                         // Also remove from failed items
-                        this.failedItems.delete(attendanceId);
+                        if (this.failedItems.has(attendanceId)) {
+                            this.failedItems.delete(attendanceId);
+                            console.log(`✅ Removed #${attendanceId} from failed items list`);
+                        }
                     }
                     // Update localStorage
                     localStorage.setItem('sync_failed_items', JSON.stringify(Array.from(this.failedItems)));
-                    console.log(`✅ Cleaned up ${resolvedIds.length} resolved items`);
+                    console.log(`✅ Cleanup complete. Remaining failed items: ${this.failedItems.size}`);
                 }
             } catch (cleanupError) {
                 console.error('Failed to cleanup resolved items:', cleanupError);

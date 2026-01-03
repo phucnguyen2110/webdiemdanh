@@ -89,10 +89,20 @@ export default function ExcelViewerPage() {
                 // Step 3: Compare timestamps
                 if (cached.timestamp === result.lastUpdated) {
 
-                    // Use cached Excel sheets
-                    let cachedSheets = cached.data.sheets || [];
+                    // FIX: Always start with clean sheets and re-merge access data
+                    // Use result.sheets (if available) or rawSheets from cache
+                    let baseSheets = result.sheets || cached.data.rawSheets || cached.data.sheets || [];
 
-                    // BUT always fetch fresh grades data (grades change frequently)
+                    // Merge FRESH attendance data
+                    let mergedSheets = baseSheets;
+                    if (result.attendanceData) {
+                        mergedSheets = mergeAttendanceIntoExcel(baseSheets, result.attendanceData);
+                    } else if (cached.data.attendanceData) {
+                        // Fallback to cached attendance if result doesn't have it (unlikely)
+                        mergedSheets = mergeAttendanceIntoExcel(baseSheets, cached.data.attendanceData);
+                    }
+
+                    // Fetch fresh grades data (grades change frequently)
                     let gradesData = [];
                     try {
                         const [gradesHK1, gradesHK2] = await Promise.all([
@@ -114,12 +124,12 @@ export default function ExcelViewerPage() {
                         console.warn('⚠️ Could not fetch grades:', gradeErr.message);
                     }
 
-                    // Merge fresh grades into cached sheets
+                    // Merge fresh grades into sheets
                     if (gradesData.length > 0) {
-                        cachedSheets = mergeGradesIntoExcel(cachedSheets, gradesData);
+                        mergedSheets = mergeGradesIntoExcel(mergedSheets, gradesData);
                     }
 
-                    setSheets(cachedSheets);
+                    setSheets(mergedSheets);
                     setClassName(cached.data.className || '');
                     setLastUpdated(cached.timestamp);
                     setIsFromCache(true);
@@ -198,7 +208,8 @@ export default function ExcelViewerPage() {
             if (result.lastUpdated) {
                 const dataToCache = {
                     ...result,
-                    sheets: mergedSheets,  // Save merged sheets (with attendance + grades)
+                    rawSheets: result.sheets, // Store CLEAN sheets
+                    sheets: mergedSheets,  // Save merged sheets (for offline use)
                     attendanceStats: attendStats,  // Save calculated stats
                     gradeStats: gradeStatsData  // Save grade stats
                 };
